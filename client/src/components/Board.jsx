@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Stage, Layer, Rect, Text } from "react-konva";
+import { Stage, Layer } from "react-konva";
 import { useQuery } from "@tanstack/react-query";
 import { fetchNotes } from "../lib/api";
 import { socket } from "../lib/socket";
+import Note from "./Note";
 
 const BOARD_ID = "demo"; // hardcoded for now
 
@@ -19,6 +20,7 @@ export default function Board() {
     setLocalNotes(notes);
   }, [notes]);
 
+  // Socket.io connection for live notes updates
   useEffect(() => {
     socket.connect();
 
@@ -74,37 +76,12 @@ export default function Board() {
             <Note
               key={note.id}
               note={note}
+              boardId={BOARD_ID}
               onDragEnd={(e) => handleDragEnd(note.id, e)}
             />
           ))}
         </Layer>
       </Stage>
     </div>
-  );
-}
-
-function Note({ note, onDragEnd }) {
-  return (
-    <>
-      <Rect
-        x={note.x}
-        y={note.y}
-        width={120}
-        height={80}
-        fill={note.color || "yellow"}
-        stroke="black"
-        strokeWidth={1}
-        draggable
-        onDragEnd={onDragEnd}
-      />
-      <Text
-        text={note.text}
-        x={note.x + 8}
-        y={note.y + 8}
-        fontSize={14}
-        width={100}
-        height={60}
-      />
-    </>
   );
 }
