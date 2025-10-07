@@ -12,13 +12,13 @@ import {
  */
 export function registerNotesSocket(io, socket) {
   // Clients should join a board-specific room before sending/receiving note events.
-  socket.on("board:join", (boardId, ack) => {
+  socket.on("board:join", async (boardId, ack) => {
     try {
       if (!boardId || typeof boardId !== "string")
         throw new Error("Invalid boardId");
       socket.join(boardRoom(boardId));
       // Optionally send snapshot via socket (we also have HTTP route)
-      const snapshot = getNotesSnapshot(boardId);
+      const snapshot = await getNotesSnapshot(boardId);
       ack?.({ ok: true, boardId, notes: snapshot });
     } catch (err) {
       ack?.({ ok: false, message: err.message });
@@ -32,9 +32,9 @@ export function registerNotesSocket(io, socket) {
   });
 
   // Create note
-  socket.on("note:create", (boardId, payload, ack) => {
+  socket.on("note:create", async (boardId, payload, ack) => {
     try {
-      const note = createNote(boardId, payload);
+      const note = await createNote(boardId, payload);
       io.to(boardRoom(boardId)).emit("note:created", { boardId, note });
       ack?.({ ok: true, note });
     } catch (err) {
@@ -43,9 +43,9 @@ export function registerNotesSocket(io, socket) {
   });
 
   // Update note (move/edit)
-  socket.on("note:update", (boardId, noteId, patch, ack) => {
+  socket.on("note:update", async (boardId, noteId, patch, ack) => {
     try {
-      const updated = updateNote(boardId, noteId, patch);
+      const updated = await updateNote(boardId, noteId, patch);
       if (!updated) {
         ack?.({ ok: false, message: "Note not found" });
         return;
@@ -61,9 +61,9 @@ export function registerNotesSocket(io, socket) {
   });
 
   // Delete note
-  socket.on("note:delete", (boardId, noteId, ack) => {
+  socket.on("note:delete", async (boardId, noteId, ack) => {
     try {
-      const ok = deleteNote(boardId, noteId);
+      const ok = await deleteNote(boardId, noteId);
       if (!ok) {
         ack?.({ ok: false, message: "Note not found" });
         return;

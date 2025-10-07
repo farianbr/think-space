@@ -5,7 +5,7 @@ import { fetchNotes } from "../lib/api";
 import { socket } from "../lib/socket";
 import Note from "./Note";
 
-const BOARD_ID = "demo"; // hardcoded for now
+const BOARD_ID = "demo-board"; // hardcoded for now
 
 export default function Board() {
   const { data: notes = [] } = useQuery({

@@ -1,0 +1,16 @@
+services:
+  db:
+    image: postgres:16
+    container_name: thinkspace-pg
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: thinkspace
+      POSTGRES_PASSWORD: thinkspace
+      POSTGRES_DB: thinkspace
+    ports:
+      - "5432:5432"
+    volumes:
+      - thinkspace-pgdata:/var/lib/postgresql/data
+
+volumes:
+  thinkspace-pgdata:

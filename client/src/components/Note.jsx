@@ -70,6 +70,8 @@ export default function Note({ note, boardId, onDragEnd }) {
           width={100}
           height={60}
           onDblClick={startEdit}
+          draggable={!isEditing}
+          onDragEnd={onDragEnd}
         />
       )}
 
