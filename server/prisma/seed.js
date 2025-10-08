@@ -1,31 +1,44 @@
-import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcrypt";
-
+import bcrypt from 'bcrypt';
+import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
-const DEMO_BOARD_ID = "demo-board";
 
 async function main() {
-  // upsert demo board
+  // demo credentials — keep these in .env for real apps
+  const email = 'demo@thinkspace.dev';
+  const plainPassword = 'demo1234';
+
+  // 1) upsert demo user
+  let user = await prisma.user.findUnique({ where: { email } });
+  if (!user) {
+    const hashed = await bcrypt.hash(plainPassword, 10);
+    user = await prisma.user.create({
+      data: {
+        email,
+        name: 'Demo User',
+        password: hashed,
+      },
+    });
+  }
+
+  // 2) ensure demo-board exists and set ownerId
   await prisma.board.upsert({
-    where: { id: DEMO_BOARD_ID },
-    update: {},
-    create: { id: DEMO_BOARD_ID, title: "Demo Board" },
+    where: { id: 'demo-board' },
+    update: { ownerId: user.id },
+    create: {
+      id: 'demo-board',
+      title: 'Demo Board',
+      ownerId: user.id,
+    },
   });
 
-  // upsert demo user
-  const email = "demo@thinkspace.dev";
-  const passwordPlain = "demo1234"; // for dev only
-  const passwordHash = await bcrypt.hash(passwordPlain, 10);
-
-  await prisma.user.upsert({
-    where: { email },
-    update: { password: passwordHash },
-    create: { email, name: "Demo User", password: passwordHash },
-  });
-
-  console.log("Seeded user:", email, "password:", passwordPlain);
+  console.log('Seed complete — demo user id:', user.id);
 }
 
 main()
-  .catch((e) => { console.error(e); process.exit(1); })
-  .finally(async () => { await prisma.$disconnect(); });
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

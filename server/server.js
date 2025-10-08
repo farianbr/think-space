@@ -4,7 +4,9 @@ import { Server } from "socket.io";
 import cors from "cors";
 import helmet from "helmet";
 import notesRouter from "./routes/notesRoutes.js";
+import boardsRouter from "./routes/boardsRoutes.js";
 import { registerNotesSocket } from "./sockets/notesSocket.js";
+import { registerBoardsSocket } from "./sockets/boardsSocket.js";
 import authRouter from "./routes/authRoutes.js";
 import { socketAuth } from "./middleware/socketAuth.js";
 
@@ -19,7 +21,7 @@ app.use(express.json());
 // REST routes 
 app.use("/api", notesRouter);
 app.use("/api/auth", authRouter);
-
+app.use("/api/boards", boardsRouter);
 
 // Socket.io setup
 const io = new Server(server, {
@@ -33,8 +35,10 @@ const io = new Server(server, {
 // Socket.io authentication
 socketAuth(io);
 
+// Socket.io connection
 io.on("connection", (socket) => {
   console.log("Socket connected:", socket.id, "User:", socket.user?.id);
+  registerBoardsSocket(io, socket);
   registerNotesSocket(io, socket);
 
   socket.on("disconnect", () => {

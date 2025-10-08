@@ -10,10 +10,13 @@ datasource db {
 model Board {
   id        String  @id @default(cuid())
   title     String
+  ownerId   String?
+  owner     User?   @relation(fields: [ownerId], references: [id], onDelete: Cascade, name: "BoardOwner")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   notes     Note[]
+  members   BoardMember[]
 }
 
 model Note {
@@ -39,7 +42,20 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // later:
-  // boards    Board[]   @relation("BoardOwner")
-  // notes     Note[]    @relation("NoteAuthor")
+  boards    Board[]   @relation("BoardOwner")
+  members   BoardMember[]
+}
+
+model BoardMember {
+  id        String   @id @default(cuid())
+  boardId   String
+  userId    String
+  role      String   @default("member") // possible values: "member", "editor", "viewer", etc.
+  createdAt DateTime @default(now())
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([boardId, userId])
+  @@index([userId])
 }

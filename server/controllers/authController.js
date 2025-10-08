@@ -1,7 +1,7 @@
 import { prisma } from "../prismaClient.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import { registerSchema, loginSchema } from "../validation/authSchemas.js";
+import { registerSchema, loginSchema } from "../validation/schemas.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 

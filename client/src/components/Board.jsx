@@ -6,6 +6,8 @@ import { toast } from "react-hot-toast";
 import { fetchNotes } from "../lib/api";
 import { socket, setSocketAuthFromStorage } from "../lib/socket";
 import Note from "./Note";
+import InviteMemberForm from "./InviteMemberForm";
+import MembersList from "./MembersList";
 
 const BOARD_ID = "demo-board";
 
@@ -77,6 +79,11 @@ export default function Board() {
 
   return (
     <div className="flex flex-col items-center">
+      <aside className="w-80">
+        <h3 className="p-3 font-semibold">Members</h3>
+        <InviteMemberForm boardId={BOARD_ID} />
+        <MembersList boardId={BOARD_ID} />
+      </aside>
       <button
         onClick={addNote}
         className="mb-4 px-4 py-2 bg-blue-500 text-white rounded"

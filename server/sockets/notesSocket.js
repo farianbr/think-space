@@ -1,41 +1,23 @@
-// sockets/notesSocket.mjs
 import {
   createNote,
   updateNote,
   deleteNote,
-  getNotesSnapshot,
 } from "../controllers/notesController.js";
 
-/**
- * Register all Socket.IO note-related handlers on a given socket.
- * Called inside io.on("connection").
- */
 export function registerNotesSocket(io, socket) {
-  // Clients should join a board-specific room before sending/receiving note events.
-  socket.on("board:join", async (boardId, ack) => {
-    try {
-      if (!boardId || typeof boardId !== "string")
-        throw new Error("Invalid boardId");
-      socket.join(boardRoom(boardId));
-      // Optionally send snapshot via socket (we also have HTTP route)
-      const snapshot = await getNotesSnapshot(boardId);
-      ack?.({ ok: true, boardId, notes: snapshot });
-    } catch (err) {
-      ack?.({ ok: false, message: err.message });
-    }
-  });
-
-  socket.on("board:leave", (boardId) => {
-    if (boardId && typeof boardId === "string") {
-      socket.leave(boardRoom(boardId));
-    }
-  });
+  const ensureJoined = (id) => socket.rooms.has(boardRoom(id));
 
   // Create note
   socket.on("note:create", async (boardId, payload, ack) => {
+    if (!ensureJoined(boardId))
+      return ack?.({ ok: false, status: 403, message: "Not joined" });
     try {
       const note = await createNote(boardId, payload);
-      io.to(boardRoom(boardId)).emit("note:created", { boardId, note, actorId: socket.user?.id });
+      io.to(boardRoom(boardId)).emit("note:created", {
+        boardId,
+        note,
+        actorId: socket.user?.id,
+      });
       ack?.({ ok: true, note });
     } catch (err) {
       ack?.({ ok: false, message: err.message });
@@ -44,6 +26,8 @@ export function registerNotesSocket(io, socket) {
 
   // Update note (move/edit)
   socket.on("note:update", async (boardId, noteId, patch, ack) => {
+    if (!ensureJoined(boardId))
+      return ack?.({ ok: false, status: 403, message: "Not joined" });
     try {
       const updated = await updateNote(boardId, noteId, patch);
       if (!updated) {
@@ -63,20 +47,25 @@ export function registerNotesSocket(io, socket) {
 
   // Delete note
   socket.on("note:delete", async (boardId, noteId, ack) => {
+    if (!ensureJoined(boardId))
+      return ack?.({ ok: false, status: 403, message: "Not joined" });
     try {
       const ok = await deleteNote(boardId, noteId);
       if (!ok) {
         ack?.({ ok: false, message: "Note not found" });
         return;
       }
-      io.to(boardRoom(boardId)).emit("note:deleted", { boardId, noteId, actorId: socket.user?.id });
+      io.to(boardRoom(boardId)).emit("note:deleted", {
+        boardId,
+        noteId,
+        actorId: socket.user?.id,
+      });
       ack?.({ ok: true });
     } catch (err) {
       ack?.({ ok: false, message: err.message });
     }
   });
 }
-
 
 /** Helper to compute a room name for a board */
 function boardRoom(boardId) {
