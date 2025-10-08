@@ -5,6 +5,8 @@ import cors from "cors";
 import helmet from "helmet";
 import notesRouter from "./routes/notesRoutes.js";
 import { registerNotesSocket } from "./sockets/notesSocket.js";
+import authRouter from "./routes/authRoutes.js";
+import { socketAuth } from "./middleware/socketAuth.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -14,10 +16,12 @@ app.use(helmet());
 app.use(cors({ origin: ["http://localhost:5173"], credentials: true }));
 app.use(express.json());
 
-// REST routes (snapshot, later: auth, boards)
+// REST routes 
 app.use("/api", notesRouter);
+app.use("/api/auth", authRouter);
 
-// Socket.io
+
+// Socket.io setup
 const io = new Server(server, {
   cors: {
     origin: "http://localhost:5173",
@@ -26,12 +30,15 @@ const io = new Server(server, {
   },
 });
 
+// Socket.io authentication
+socketAuth(io);
+
 io.on("connection", (socket) => {
-  console.log("User connected:", socket.id);
+  console.log("Socket connected:", socket.id, "User:", socket.user?.id);
   registerNotesSocket(io, socket);
 
   socket.on("disconnect", () => {
-    console.log("User disconnected:", socket.id);
+    console.log("Socket disconnected:", socket.id, "User:", socket.user?.id);
   });
 });
 

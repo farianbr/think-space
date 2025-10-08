@@ -30,3 +30,16 @@ model Note {
 
   @@index([boardId])
 }
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String   // bcrypt hash
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // later:
+  // boards    Board[]   @relation("BoardOwner")
+  // notes     Note[]    @relation("NoteAuthor")
+}

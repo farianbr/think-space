@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { Stage, Layer } from "react-konva";
 import { useQuery } from "@tanstack/react-query";
+import { toast } from "react-hot-toast";
+
 import { fetchNotes } from "../lib/api";
-import { socket } from "../lib/socket";
+import { socket, setSocketAuthFromStorage } from "../lib/socket";
 import Note from "./Note";
 
-const BOARD_ID = "demo-board"; // hardcoded for now
+const BOARD_ID = "demo-board";
 
 export default function Board() {
   const { data: notes = [] } = useQuery({
@@ -22,11 +24,23 @@ export default function Board() {
 
   // Socket.io connection for live notes updates
   useEffect(() => {
+    setSocketAuthFromStorage();
     socket.connect();
+
+    socket.on("connect_error", (err) => {
+      console.error("Socket connect_error:", err?.message);
+      if (err?.message === "AUTH_MISSING" || err?.message === "AUTH_INVALID") {
+        toast.error("Please sign in to continue");
+      }
+      
+    });
 
     socket.emit("board:join", BOARD_ID, (ack) => {
       if (ack?.ok) {
         setLocalNotes(ack.notes);
+      }
+      else {
+        console.warn("board:join failed::", ack);
       }
     });
 

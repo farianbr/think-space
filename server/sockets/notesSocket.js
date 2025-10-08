@@ -35,7 +35,7 @@ export function registerNotesSocket(io, socket) {
   socket.on("note:create", async (boardId, payload, ack) => {
     try {
       const note = await createNote(boardId, payload);
-      io.to(boardRoom(boardId)).emit("note:created", { boardId, note });
+      io.to(boardRoom(boardId)).emit("note:created", { boardId, note, actorId: socket.user?.id });
       ack?.({ ok: true, note });
     } catch (err) {
       ack?.({ ok: false, message: err.message });
@@ -53,6 +53,7 @@ export function registerNotesSocket(io, socket) {
       io.to(boardRoom(boardId)).emit("note:updated", {
         boardId,
         note: updated,
+        actorId: socket.user?.id,
       });
       ack?.({ ok: true, note: updated });
     } catch (err) {
@@ -68,7 +69,7 @@ export function registerNotesSocket(io, socket) {
         ack?.({ ok: false, message: "Note not found" });
         return;
       }
-      io.to(boardRoom(boardId)).emit("note:deleted", { boardId, noteId });
+      io.to(boardRoom(boardId)).emit("note:deleted", { boardId, noteId, actorId: socket.user?.id });
       ack?.({ ok: true });
     } catch (err) {
       ack?.({ ok: false, message: err.message });

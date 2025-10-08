@@ -1,15 +1,29 @@
 import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import bcrypt from "bcrypt";
 
-const DEMO_BOARD_ID = "demo-board"; // stable predictable id for dev
+const prisma = new PrismaClient();
+const DEMO_BOARD_ID = "demo-board";
 
 async function main() {
+  // upsert demo board
   await prisma.board.upsert({
     where: { id: DEMO_BOARD_ID },
     update: {},
     create: { id: DEMO_BOARD_ID, title: "Demo Board" },
   });
-  console.log("Seeded board:", DEMO_BOARD_ID);
+
+  // upsert demo user
+  const email = "demo@thinkspace.dev";
+  const passwordPlain = "demo1234"; // for dev only
+  const passwordHash = await bcrypt.hash(passwordPlain, 10);
+
+  await prisma.user.upsert({
+    where: { email },
+    update: { password: passwordHash },
+    create: { email, name: "Demo User", password: passwordHash },
+  });
+
+  console.log("Seeded user:", email, "password:", passwordPlain);
 }
 
 main()
