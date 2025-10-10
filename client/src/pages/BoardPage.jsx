@@ -1,23 +1,29 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Stage, Layer } from "react-konva";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "react-hot-toast";
 
 import { fetchNotes } from "../lib/api";
 import { socket, setSocketAuthFromStorage } from "../lib/socket";
-import Note from "./Note";
-import InviteMemberForm from "./InviteMemberForm";
-import MembersList from "./MembersList";
+import Note from "../components/Note";
+import InviteMemberForm from "../components/InviteMemberForm";
+import MembersList from "../components/MembersList";
+import useMembersSocket from "../hooks/useMembersSocket";
+import ActiveUsers from "../components/ActiveUsers";
+import useOnlineMembers from "../hooks/useOnlineMembers";
+import { useParams } from "react-router-dom";
 
-const BOARD_ID = "demo-board";
-
-export default function Board() {
+export default function BoardPage() {
+  const { boardId: BOARD_ID } = useParams();
   const { data: notes = [] } = useQuery({
     queryKey: ["notes", BOARD_ID],
     queryFn: () => fetchNotes(BOARD_ID),
   });
-
+  const stageRef = useRef(null);
   const [localNotes, setLocalNotes] = useState([]);
+
+  // Socket.io connection for live board member updates
+  useMembersSocket(BOARD_ID);
 
   // Merge snapshot + live updates
   useEffect(() => {
@@ -34,14 +40,12 @@ export default function Board() {
       if (err?.message === "AUTH_MISSING" || err?.message === "AUTH_INVALID") {
         toast.error("Please sign in to continue");
       }
-      
     });
 
     socket.emit("board:join", BOARD_ID, (ack) => {
       if (ack?.ok) {
         setLocalNotes(ack.notes);
-      }
-      else {
+      } else {
         console.warn("board:join failed::", ack);
       }
     });
@@ -51,9 +55,7 @@ export default function Board() {
     });
 
     socket.on("note:updated", ({ note }) => {
-      setLocalNotes((prev) =>
-        prev.map((n) => (n.id === note.id ? note : n))
-      );
+      setLocalNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
     });
 
     socket.on("note:deleted", ({ noteId }) => {
@@ -62,12 +64,18 @@ export default function Board() {
 
     return () => {
       socket.emit("board:leave", BOARD_ID);
-      socket.disconnect();
     };
-  }, []);
+  }, [BOARD_ID]);
 
   const addNote = () => {
-    socket.emit("note:create", BOARD_ID, { text: "New note", x: 100, y: 100 });
+    socket.emit(
+      "note:create",
+      BOARD_ID,
+      { text: "New note", x: 100, y: 100 },
+      (ack) => {
+        if (!ack.ok) toast.error("Failed to create note");
+      }
+    );
   };
 
   const handleDragEnd = (id, e) => {
@@ -77,12 +85,17 @@ export default function Board() {
     });
   };
 
+  // Live presence
+  const { online } = useOnlineMembers(BOARD_ID);
+
   return (
     <div className="flex flex-col items-center">
       <aside className="w-80">
         <h3 className="p-3 font-semibold">Members</h3>
-        <InviteMemberForm boardId={BOARD_ID} />
         <MembersList boardId={BOARD_ID} />
+        <h3 className="p-3 font-semibold">Active</h3>
+        <ActiveUsers activeList={online} />
+        <InviteMemberForm boardId={BOARD_ID} />
       </aside>
       <button
         onClick={addNote}
@@ -91,18 +104,29 @@ export default function Board() {
         Add Note
       </button>
 
-      <Stage width={800} height={600} className="border border-gray-400">
-        <Layer>
-          {localNotes.map((note) => (
-            <Note
-              key={note.id}
-              note={note}
-              boardId={BOARD_ID}
-              onDragEnd={(e) => handleDragEnd(note.id, e)}
-            />
-          ))}
-        </Layer>
-      </Stage>
+      <div
+        id="board-container"
+        className="flex-1 relative bg-white border rounded"
+        style={{ minHeight: 600 }}
+      >
+        <Stage
+          ref={stageRef}
+          width={800}
+          height={600}
+          className="border border-gray-400"
+        >
+          <Layer>
+            {localNotes.map((note) => (
+              <Note
+                key={note.id}
+                note={note}
+                boardId={BOARD_ID}
+                onDragEnd={(e) => handleDragEnd(note.id, e)}
+              />
+            ))}
+          </Layer>
+        </Stage>
+      </div>
     </div>
   );
 }

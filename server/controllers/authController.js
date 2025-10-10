@@ -25,7 +25,7 @@ export async function register(req, res) {
     });
 
     // issue token on register for better UX
-    const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ sub: user.id, name: name }, JWT_SECRET, { expiresIn: "7d" });
 
     return res.status(201).json({ user: toPublicUser(user), token });
   } catch (err) {
@@ -47,7 +47,7 @@ export async function login(req, res) {
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) return res.status(401).json({ error: "Invalid credentials" });
 
-    const token = jwt.sign({ sub: user.id }, JWT_SECRET, { expiresIn: "7d" });
+    const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
 
     return res.json({ user: toPublicUser(user), token });
   } catch (err) {
@@ -56,5 +56,21 @@ export async function login(req, res) {
     }
     console.error(err);
     return res.status(500).json({ error: "Server error" });
+  }
+}
+
+export async function getMe(req, res) {
+  try {
+    const user = await prisma.user.findUnique({ 
+      where: { id: req.user.id },
+      select: { id: true, email: true, name: true, createdAt: true }
+    });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    res.json({ user });
+  } catch (err) {
+    console.error("Error fetching user:", err);
+    res.status(500).json({ error: "Server error" });
   }
 }

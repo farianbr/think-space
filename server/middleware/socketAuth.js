@@ -16,7 +16,7 @@ export function socketAuth(io) {
       }
 
       const payload = jwt.verify(token, JWT_SECRET); // throws on invalid/expired
-      socket.user = { id: payload.sub };
+      socket.user = { id: payload.sub, name: payload.name };
       return next();
     } catch (err) {
       return next(new Error("AUTH_INVALID"));

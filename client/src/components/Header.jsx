@@ -1,56 +1,86 @@
-import { useEffect, useState } from "react";
-import LoginForm from "../features/auth/LoginForm";
-import { clearAuth, getUser } from "../lib/auth";
 import { setSocketAuthFromStorage } from "../lib/socket";
+import { useAuth } from "../contexts/authContext";
+import { Link } from "react-router-dom";
 
-export default function Header({ onAuthChange }) {
-  const [user, setUser] = useState(() => getUser());
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    onAuthChange?.(user);
-  }, [user, onAuthChange]);
+export default function Header() {
+  const { user, logout } = useAuth();
 
   function handleLogout() {
-    clearAuth();
-    setUser(null);
+    logout();
     setSocketAuthFromStorage(); // refresh socket auth
   }
 
   return (
-    <header className="flex w-full items-center justify-between border-b bg-white px-4 py-2">
-      <div className="text-lg font-semibold">💡 ThinkSpace</div>
+    <header className="flex w-full items-center justify-between border-b bg-white px-4 py-3 shadow-sm">
+      {/* Logo and Navigation */}
+      <div className="flex items-center space-x-8">
+        <Link
+          to="/"
+          className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
+        >
+          💡 ThinkSpace
+        </Link>
 
+        {/* Navigation Links */}
+        {user && (
+          <nav className="hidden md:flex items-center space-x-6">
+            <Link
+              to="/boards"
+              className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+            >
+              My Boards
+            </Link>
+            <Link
+              to="/boards"
+              className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
+            >
+              Recent
+            </Link>
+          </nav>
+        )}
+      </div>
+
+      {/* User Actions */}
       {!user ? (
-        <div className="relative">
-          <button
-            onClick={() => setOpen((o) => !o)}
-            className="rounded border px-3 py-1 text-sm hover:bg-gray-50"
+        <div className="flex items-center space-x-3">
+          <Link
+            to="/login"
+            className="text-gray-600 hover:text-gray-900 font-medium px-3 py-2 rounded-lg transition-colors"
           >
             Sign in
-          </button>
-          {open && (
-            <div className="absolute right-0 z-10 mt-2 w-64 rounded border bg-white p-3 shadow">
-              <LoginForm
-                onSuccess={(u) => {
-                  setUser(u);
-                  setSocketAuthFromStorage(); // refresh socket auth
-                  setOpen(false);
-                }}
-              />
-            </div>
-          )}
+          </Link>
+          <Link
+            to="/register"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-lg transition-colors shadow-sm"
+          >
+            Get Started
+          </Link>
         </div>
       ) : (
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-gray-700">
-            Signed in as <span className="font-medium">{user.email}</span>
-          </span>
+        <div className="flex items-center space-x-4">
+          {/* User Info */}
+          <div className="hidden sm:flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+              <span className="text-white text-sm font-medium">
+                {user.name
+                  ? user.name.charAt(0).toUpperCase()
+                  : user.email.charAt(0).toUpperCase()}
+              </span>
+            </div>
+            <div className="text-sm">
+              <div className="font-medium text-gray-900">
+                {user.name || "User"}
+              </div>
+              <div className="text-gray-500">{user.email}</div>
+            </div>
+          </div>
+
+          {/* Logout Button */}
           <button
             onClick={handleLogout}
-            className="rounded border px-3 py-1 text-sm hover:bg-gray-50"
+            className="text-gray-600 hover:text-gray-900 font-medium px-3 py-2 rounded-lg border border-gray-300 hover:border-gray-400 transition-colors"
           >
-            Logout
+            Sign out
           </button>
         </div>
       )}

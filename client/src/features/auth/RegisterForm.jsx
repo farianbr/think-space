@@ -2,14 +2,15 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "../../contexts/authContext";
 
-export default function LoginForm({ onSuccess }) {
-  const [email, setEmail] = useState("demo@thinkspace.dev");
-  const [password, setPassword] = useState("demo1234");
+export default function RegisterForm({ onSuccess }) {
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [password, setPassword] = useState("");
 
-  const { login } = useAuth();
+  const { register } = useAuth();
 
   const { mutate, isPending, error } = useMutation({
-    mutationFn: ({ email, password }) => login({ email, password }),
+    mutationFn: ({ email, name, password }) => register({ email, name, password }),
     onSuccess: (data) => {
       onSuccess?.(data.user || data);
     },
@@ -17,11 +18,18 @@ export default function LoginForm({ onSuccess }) {
 
   function handleSubmit(e) {
     e.preventDefault();
-    mutate({ email, password });
+    mutate({ email, name, password });
   }
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+      <input
+        className="rounded border border-gray-300 px-3 py-2 text-sm"
+        placeholder="Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        autoComplete="name"
+      />
       <input
         className="rounded border border-gray-300 px-3 py-2 text-sm"
         placeholder="Email"
@@ -35,19 +43,19 @@ export default function LoginForm({ onSuccess }) {
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        autoComplete="current-password"
+        autoComplete="new-password"
       />
       {error && (
         <div className="text-sm text-red-600">
-          {error?.response?.data?.error || "Login failed"}
+          {error?.response?.data?.error || "Register failed"}
         </div>
       )}
       <button
         type="submit"
         disabled={isPending}
-        className="rounded bg-blue-600 px-3 py-2 text-white hover:bg-blue-700 disabled:opacity-60"
+        className="rounded bg-green-600 px-3 py-2 text-white hover:bg-green-700 disabled:opacity-60"
       >
-        {isPending ? "Signing in…" : "Sign in"}
+        {isPending ? "Creating…" : "Create account"}
       </button>
     </form>
   );

@@ -13,3 +13,8 @@ export const socket = io("http://localhost:4000", {
 export function setSocketAuthFromStorage() {
   socket.auth = { token: getToken() || "" };
 }
+
+// connect when app starts (or after login)
+export function connectSocket() {
+  if (!socket.connected) socket.connect();
+}

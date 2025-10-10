@@ -1,20 +1,54 @@
-import { useState } from "react";
-import Header from "./components/Header";
-import Board from "./components/Board";
-import BoardsList from "./components/BoardsList";
+import { Routes, Route, useLocation } from "react-router-dom";
 
-export default function App() {
-  const [authedUser, setAuthedUser] = useState(null);
+import Home from "./pages/Home";
+import BoardsDashboard from "./pages/BoardsDashboard";
+import BoardPage from "./pages/BoardPage";
+import Header from "./components/Header";
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import { AuthProvider } from "./contexts/AuthProvider";
+import RequireAuth from "./components/RequireAuth";
+
+function AppContent() {
+  const location = useLocation();
+  const isHomePage = location.pathname === "/";
 
   return (
-    <div className="flex min-h-screen flex-col bg-gray-100">
-      <Header onAuthChange={setAuthedUser} />
-      <BoardsList />
-      <main className="flex flex-1 items-center justify-center p-6">
-        <div className="w-full max-w-4xl">
-          <Board />
-        </div>
-      </main>
-    </div>
+    <>
+      {!isHomePage && <Header />}
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+
+        <Route
+          path="/boards"
+          element={
+            <RequireAuth>
+              <BoardsDashboard />
+            </RequireAuth>
+          }
+        />
+
+        <Route
+          path="/board/:boardId"
+          element={
+            <RequireAuth>
+              <BoardPage />
+            </RequireAuth>
+          }
+        />
+
+        <Route path="*" element={<div>404 - Not Found</div>} />
+      </Routes>
+    </>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
