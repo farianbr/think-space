@@ -58,7 +58,7 @@ export default function Home() {
                   <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
                   <div className="w-3 h-3 bg-green-400 rounded-full"></div>
                   <div className="ml-4 text-sm text-gray-500">
-                    ThinkSpace Board
+                    Think Space Board
                   </div>
                 </div>
                 <div className="p-8 bg-gradient-to-br from-blue-50 to-indigo-50 min-h-64 flex items-center justify-center">
@@ -165,7 +165,7 @@ export default function Home() {
               Ready to start collaborating?
             </h2>
             <p className="text-xl text-blue-100 mb-8">
-              Join thousands of teams already using ThinkSpace to bring their
+              Join thousands of teams already using Think Space to bring their
               ideas to life.
             </p>
             <Link
@@ -182,7 +182,7 @@ export default function Home() {
       <footer className="bg-gray-900 text-gray-400 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p>
-            &copy; 2025 ThinkSpace. Made with 💡 for creative collaboration.
+            &copy; 2025 Think Space. Made by Farian Bin Rahman.
           </p>
         </div>
       </footer>

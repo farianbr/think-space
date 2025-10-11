@@ -1,7 +1,7 @@
 import { io } from "socket.io-client";
 import { getToken } from "./auth";
 
-export const socket = io("http://localhost:4000", {
+export const socket = io("http://192.168.0.218:4000", {
   withCredentials: true,
   autoConnect: false,
   reconnection: true,

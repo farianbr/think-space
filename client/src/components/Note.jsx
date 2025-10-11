@@ -16,13 +16,16 @@ const PALETTE = [
 
 import { throttle } from "../lib/throttle";
 
-export default function Note({ note, boardId, onDragStart, onDragEnd }) {
+export default function Note({ note, boardId, onDragStart, onDragEnd, activeNoteId, setActiveNoteId }) {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(note.text);
   const [showPalette, setShowPalette] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
+  const [lastTapTime, setLastTapTime] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const textareaRef = useRef(null);
   const [noteSize, setNoteSize] = useState({
     width: note.width || 140,
     height: note.height || 90,
@@ -45,6 +48,40 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
     setValue(note.text);
   }, [note.text]);
 
+  // Detect mobile and handle control visibility
+  useEffect(() => {
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 1024 || 'ontouchstart' in window;
+      console.log('Mobile detection:', mobile, 'width:', window.innerWidth, 'touch:', 'ontouchstart' in window);
+      setIsMobile(mobile);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Position cursor at end when editing starts
+  useEffect(() => {
+    if (isEditing && textareaRef.current) {
+      const textarea = textareaRef.current;
+      // Delay to ensure the textarea is fully rendered and positioned
+      const delay = isMobile ? 50 : 10; // Longer delay for mobile
+      setTimeout(() => {
+        textarea.focus();
+        // Move cursor to end of text - works for both mobile and PC
+        const length = textarea.value.length;
+        textarea.setSelectionRange(length, length);
+        textarea.scrollTop = 0; // Ensure we're at the top of the text area
+        // Force cursor to end again in case of race conditions
+        requestAnimationFrame(() => {
+          textarea.setSelectionRange(length, length);
+        });
+      }, delay);
+    }
+  }, [isEditing, isMobile]);
+
   // Sync size changes with safety checks
   useEffect(() => {
     // If we're actively resizing, ignore server echoes to avoid jitter
@@ -66,15 +103,88 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
   }, []);
 
   function startEdit() {
+    console.log('startEdit called - from where?', new Error().stack);
     setShowPalette(false);
     setIsEditing(true);
   }
+
+  // Handle double-tap for mobile and double-click for desktop
+  function handleTap(e) {
+    // Prevent event bubbling to avoid multiple calls
+    if (e.evt) {
+      e.evt.stopPropagation();
+      e.evt.preventDefault();
+    }
+    
+    // Don't handle tap events during dragging
+    if (isDragging || isDraggingRef.current) {
+      return;
+    }
+
+    const now = Date.now();
+    const timeDiff = now - lastTapTime;
+    
+    console.log('handleTap - isMobile:', isMobile, 'timeDiff:', timeDiff, 'lastTapTime:', lastTapTime);
+    
+    if (isMobile) {
+      // Check for double tap: must be within 300ms AND lastTapTime must not be 0
+      if (timeDiff < 300 && lastTapTime > 0) {
+        // Double tap detected - start editing
+        console.log('Double tap detected - starting edit');
+        startEdit();
+        setLastTapTime(0); // Reset to prevent triple tap
+      } else {
+        // Single tap - show/hide controls on mobile
+        console.log('Single tap - toggling controls');
+        if (activeNoteId === note.id) {
+          setActiveNoteId(null);
+        } else {
+          setActiveNoteId(note.id);
+        }
+        setLastTapTime(now);
+      }
+    } else {
+      // On desktop, just record the tap time for potential double-click
+      setLastTapTime(now);
+    }
+  }
+
+  // Handle double-click for desktop
+  function handleDoubleClick(e) {
+    if (!isMobile) {
+      e.evt?.stopPropagation();
+      startEdit();
+    }
+  }
+
+  // Determine if this note should show mobile controls
+  const shouldShowMobileControls = isMobile && activeNoteId === note.id;
 
   function finishEdit() {
     setIsEditing(false);
     const next = value.trim();
     if (next !== note.text) {
       socket.emit("note:update", boardId, note.id, { text: next });
+    }
+    
+    // Clear mobile controls after editing
+    if (isMobile && setActiveNoteId) {
+      setActiveNoteId(null);
+    }
+    
+    // On mobile, blur any active element and prevent viewport zoom
+    if (isMobile) {
+      // Blur the textarea to ensure keyboard closes
+      if (textareaRef.current) {
+        textareaRef.current.blur();
+      }
+      // Small delay to ensure blur happens before any other actions
+      setTimeout(() => {
+        // Force a brief viewport reset if needed
+        if (window.visualViewport) {
+          window.scrollTo(0, 0);
+        }
+      }, 100);
     }
   }
 
@@ -89,6 +199,12 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
   function applyColor(colorObj) {
     socket.emit("note:update", boardId, note.id, { color: colorObj.color });
     setShowPalette(false);
+    // Clear mobile controls after color change with delay
+    if (isMobile && setActiveNoteId) {
+      setTimeout(() => {
+        setActiveNoteId(null);
+      }, 100);
+    }
   }
 
   function handleDragStart(e) {
@@ -109,9 +225,16 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
     isDraggingRef.current = false;
     setIsDragging(false);
 
+    // Clear mobile controls after dragging on mobile - with delay to ensure drag is complete
+    if (isMobile && setActiveNoteId) {
+      setTimeout(() => {
+        setActiveNoteId(null);
+      }, 100);
+    }
+
     // Only emit drag end if we weren't resizing
     if (!isResizingRef.current && onDragEnd) {
-      onDragEnd(e);
+      onDragEnd(e, note); // Pass note object for position updates
     }
   }
 
@@ -235,8 +358,10 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
       draggable={!isEditing && !isResizing}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      onMouseEnter={() => !isMobile && setIsHovered(true)}
+      onMouseLeave={() => !isMobile && setIsHovered(false)}
+      onTap={isMobile ? handleTap : undefined}
+      onDblClick={isMobile ? null : handleDoubleClick}
     >
       {/* Drop shadow */}
       <Rect
@@ -253,14 +378,26 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
         width={width}
         height={height}
         fill={noteColor}
-        stroke={isDragging ? "#3b82f6" : isHovered ? "#6b7280" : "#d1d5db"}
-        strokeWidth={isDragging ? 2 : 1}
+        stroke={
+          isDragging 
+            ? "#3b82f6" 
+            : shouldShowMobileControls
+            ? "#10b981" // Green border for mobile controls active
+            : isHovered 
+            ? "#6b7280" 
+            : "#d1d5db"
+        }
+        strokeWidth={isDragging || shouldShowMobileControls ? 2 : 1}
         cornerRadius={8}
         shadowColor="rgba(0,0,0,0.1)"
         shadowBlur={isDragging ? 8 : 4}
         shadowOffset={{ x: 2, y: 2 }}
         shadowOpacity={0.3}
-        onDblClick={startEdit}
+        onDblClick={isMobile ? null : () => {
+          startEdit();
+        }}
+        onTouchEnd={undefined}
+        onClick={isMobile ? null : undefined}
       />
 
       {/* Paper texture lines - only show if note is tall enough */}
@@ -304,11 +441,16 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
       )}
 
       {/* Delete X */}
-      {(isHovered || isDragging || showPalette) && (
+      {(isHovered || isDragging || showPalette || shouldShowMobileControls) && (
         <Group
           x={width - 18}
           y={13}
           onClick={handleDelete}
+          onTouchEnd={(e) => {
+            e.evt.stopPropagation();
+            e.evt.preventDefault();
+            handleDelete();
+          }}
           onMouseEnter={(e) => {
             const group = e.currentTarget;
             group.to({
@@ -356,7 +498,7 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
       )}
 
       {/* Color picker button - top left corner inside note */}
-      {(isHovered || isDragging || showPalette) && (
+      {(isHovered || isDragging || showPalette || shouldShowMobileControls) && (
         <Circle
           x={15}
           y={15}
@@ -402,6 +544,11 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
             });
           }}
           onClick={togglePalette}
+          onTouchEnd={(e) => {
+            e.evt.stopPropagation();
+            e.evt.preventDefault();
+            togglePalette();
+          }}
         />
       )}
 
@@ -419,7 +566,8 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
           lineHeight={1.4}
           wrap="word"
           verticalAlign="top"
-          onDblClick={startEdit}
+          onDblClick={isMobile ? null : startEdit}
+          onTouchEnd={undefined}
         />
       )}
 
@@ -427,10 +575,25 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
       {isEditing && (
         <Html groupProps={{ x: 12, y: height > 40 ? 30 : 12 }}>
           <textarea
+            ref={textareaRef}
             autoFocus
             value={value}
             onChange={(e) => setValue(e.target.value)}
             onBlur={finishEdit}
+            onTouchStart={(e) => {
+              // Prevent any touch zoom on the textarea
+              e.stopPropagation();
+            }}
+            onFocus={(e) => {
+              // Prevent parent events during editing
+              e.stopPropagation();
+              // Ensure cursor goes to end when focused - for both mobile and desktop
+              const textarea = e.target;
+              setTimeout(() => {
+                const length = textarea.value.length;
+                textarea.setSelectionRange(length, length);
+              }, isMobile ? 10 : 5); // Slightly longer delay for mobile
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
@@ -441,12 +604,27 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
                 finishEdit();
               }
             }}
-            className="resize-none border-none outline-none bg-transparent text-sm text-gray-700 font-medium leading-relaxed p-0"
+            className="resize-none border-none outline-none bg-transparent text-sm text-gray-700 font-medium leading-relaxed p-0 touch-manipulation"
             style={{
               fontFamily: "'Inter', 'Segoe UI', sans-serif",
               width: `${width - 24}px`,
               height: `${height - (height > 40 ? 40 : 24)}px`,
               minHeight: "20px",
+              fontSize: "16px", // Prevent zoom on mobile browsers
+              transform: "translateZ(0)", // Force hardware acceleration
+              WebkitTransform: "translateZ(0)", // Safari
+              WebkitUserSelect: "text", // Allow text selection
+              WebkitTouchCallout: "none", // Disable callout
+              WebkitTapHighlightColor: "transparent", // Remove tap highlight
+              userSelect: "text", // Standard property
+              touchAction: "manipulation", // Prevent double-tap zoom
+              // Additional cross-browser zoom prevention
+              zoom: "1", // Prevent IE zoom
+              maxHeight: "none", // Prevent height restrictions
+              lineHeight: "1.4", // Consistent line height
+              // Prevent zoom in Chrome/Edge on Android
+              WebkitTextSizeAdjust: "100%",
+              textSizeAdjust: "100%",
             }}
             placeholder="Type your note..."
           />
@@ -457,15 +635,17 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
       {showPalette && (
         <Html groupProps={{ x: 10, y: -50 }}>
           <div
-            className="flex flex-wrap gap-1.5 rounded-lg border border-gray-200 bg-white p-2 shadow-lg z-50"
+            className="flex flex-wrap gap-2 rounded-lg border border-gray-200 bg-white p-3 shadow-lg z-50"
             onClick={(e) => e.stopPropagation()}
-            style={{ width: "180px" }}
+            style={{ width: window.innerWidth < 768 ? "200px" : "180px" }}
           >
             {PALETTE.map((colorObj) => (
               <button
                 key={colorObj.color}
                 onClick={() => applyColor(colorObj)}
-                className="h-7 w-7 rounded-full border-2 border-gray-200 hover:border-gray-400 hover:scale-110 transition-all duration-200 shadow-sm"
+                className={`${
+                  window.innerWidth < 768 ? "h-8 w-8" : "h-7 w-7"
+                } rounded-full border-2 border-gray-200 hover:border-gray-400 hover:scale-110 transition-all duration-200 shadow-sm touch-manipulation`}
                 style={{ background: colorObj.color }}
                 title={colorObj.name}
               />
@@ -475,10 +655,10 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
       )}
 
       {/* Resize handle - bottom right corner */}
-      {(isHovered || isDragging || isResizing) && !isEditing && (
+      {(isHovered || isDragging || isResizing || shouldShowMobileControls) && !isEditing && (
         <Group
-          x={width - 12} // nudged a bit so the handle sits slightly outside the card corner
-          y={height - 12}
+          x={width - 16} // Increased touch target area
+          y={height - 16}
           ref={resizeHandleRef}
           draggable={true}
           onMouseDown={(e) => {
@@ -487,6 +667,15 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
             e.evt.preventDefault();
             e.evt.stopPropagation();
             // small immediate press feedback
+            const g = e.currentTarget;
+            g.to({ scaleX: 0.9, scaleY: 0.9, duration: 0.06 });
+            handleResizeStart(e);
+          }}
+          onTouchStart={(e) => {
+            // Touch support for resize handle
+            e.cancelBubble = true;
+            e.evt.preventDefault();
+            e.evt.stopPropagation();
             const g = e.currentTarget;
             g.to({ scaleX: 0.9, scaleY: 0.9, duration: 0.06 });
             handleResizeStart(e);
@@ -515,12 +704,12 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
             g.findOne(".bg").fill("rgba(59,130,246,0.8)");
           }}
         >
-          {/* Background circle */}
+          {/* Background circle - larger for touch */}
           <Circle
             name="bg"
             x={0}
             y={0}
-            radius={8}
+            radius={12} // Increased from 8 to 12 for better touch target
             fill="rgba(59,130,246,0.8)" // Tailwind blue-500 @ 80% opacity
             stroke="white"
             strokeWidth={1}
@@ -532,26 +721,26 @@ export default function Note({ note, boardId, onDragStart, onDragEnd }) {
           {/* Grip: three diagonal short lines to indicate resize */}
           <Group rotation={45} x={-1} y={0}>
             <Rect
-              x={-2}
-              y={-4.5}
-              width={6}
-              height={1.2}
+              x={-3}
+              y={-6}
+              width={8}
+              height={1.5}
               fill="rgba(255,255,255,0.92)"
               cornerRadius={1}
             />
             <Rect
-              x={-2}
-              y={-1}
-              width={6}
-              height={1.2}
+              x={-3}
+              y={-1.5}
+              width={8}
+              height={1.5}
               fill="rgba(255,255,255,0.82)"
               cornerRadius={1}
             />
             <Rect
-              x={-2}
-              y={2.5}
-              width={6}
-              height={1.2}
+              x={-3}
+              y={3}
+              width={8}
+              height={1.5}
               fill="rgba(255,255,255,0.72)"
               cornerRadius={1}
             />

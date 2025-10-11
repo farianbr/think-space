@@ -16,7 +16,7 @@ export default function LoginPage() {
             to="/"
             className="text-3xl font-bold text-gray-900 inline-block hover:text-blue-600 transition-colors"
           >
-            💡 ThinkSpace
+            💡 Think Space
           </Link>
           <p className="text-gray-600 mt-2">
             Welcome back! Sign in to your account
@@ -59,7 +59,7 @@ export default function LoginPage() {
 
         {/* Footer Text */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          <p>Secure sign-in powered by ThinkSpace</p>
+          <p>Secure sign-in powered by Think Space</p>
         </div>
       </div>
     </div>

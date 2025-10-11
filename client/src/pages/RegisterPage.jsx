@@ -14,7 +14,7 @@ export default function RegisterPage() {
             to="/"
             className="text-3xl font-bold text-gray-900 inline-block hover:text-blue-600 transition-colors"
           >
-            💡 ThinkSpace
+            💡 Think Space
           </Link>
           <p className="text-gray-600 mt-2">
             Create your account and start collaborating
@@ -59,7 +59,7 @@ export default function RegisterPage() {
 
         {/* Footer Text */}
         <div className="text-center mt-8 text-sm text-gray-500">
-          <p>Join thousands of teams already using ThinkSpace</p>
+          <p>Join thousands of teams already using Think Space</p>
         </div>
       </div>
     </div>

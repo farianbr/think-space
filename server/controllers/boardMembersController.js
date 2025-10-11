@@ -16,7 +16,12 @@ export async function getBoardMembers(req, res) {
 
     const board = await prisma.board.findUnique({
       where: { id: boardId },
-      select: { id: true, ownerId: true },
+      select: { 
+        id: true, 
+        ownerId: true,
+        createdAt: true,
+        owner: { select: { id: true, email: true, name: true } }
+      },
     });
 
     if (!board) return res.status(404).json({ message: "Board not found" });
@@ -34,7 +39,24 @@ export async function getBoardMembers(req, res) {
       include: { user: { select: { id: true, email: true, name: true } } },
     });
 
-    return res.json({ members });
+    // Add the board owner to the members list if they're not already there
+    const allMembers = [...members];
+    if (board.ownerId && board.owner) {
+      const ownerExists = members.some(member => member.userId === board.ownerId);
+      if (!ownerExists) {
+        // Create a fake member entry for the owner
+        allMembers.unshift({
+          id: `owner-${board.ownerId}`,
+          boardId: boardId,
+          userId: board.ownerId,
+          role: 'owner',
+          createdAt: board.createdAt || new Date(),
+          user: board.owner
+        });
+      }
+    }
+
+    return res.json({ members: allMembers });
   } catch (err) {
     console.error("getBoardMembers error", err);
     return res.status(500).json({ message: "Server error" });

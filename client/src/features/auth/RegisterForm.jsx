@@ -24,21 +24,24 @@ export default function RegisterForm({ onSuccess }) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-2">
       <input
-        className="rounded border border-gray-300 px-3 py-2 text-sm"
+        className="rounded border border-gray-300 px-3 py-2 text-base"
+        style={{ fontSize: "16px" }} // Prevent zoom on iOS
         placeholder="Name"
         value={name}
         onChange={(e) => setName(e.target.value)}
         autoComplete="name"
       />
       <input
-        className="rounded border border-gray-300 px-3 py-2 text-sm"
+        className="rounded border border-gray-300 px-3 py-2 text-base"
+        style={{ fontSize: "16px" }} // Prevent zoom on iOS
         placeholder="Email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         autoComplete="email"
       />
       <input
-        className="rounded border border-gray-300 px-3 py-2 text-sm"
+        className="rounded border border-gray-300 px-3 py-2 text-base"
+        style={{ fontSize: "16px" }} // Prevent zoom on iOS
         placeholder="Password"
         type="password"
         value={password}

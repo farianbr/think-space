@@ -13,6 +13,9 @@ import {
   UserPlus,
   X,
   Circle,
+  Menu,
+  MoreHorizontal,
+  HelpCircle,
 } from "lucide-react";
 
 import { connectSocket, socket } from "../lib/socket";
@@ -24,6 +27,7 @@ import Note from "../components/Note";
 import ActiveUsers from "../components/ActiveUsers";
 import MembersList from "../components/MembersList";
 import InviteModal from "../components/InviteModal";
+import MobileHelpModal from "../components/MobileHelpModal";
 import useOnlineMembers from "../hooks/useOnlineMembers";
 import useMembersSocket from "../hooks/useMembersSocket";
 
@@ -36,6 +40,9 @@ export default function BoardPage() {
   const [joined, setJoined] = useState(false);
   const [showMembersPanel, setShowMembersPanel] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showMobileHelpModal, setShowMobileHelpModal] = useState(false);
+  const [activeNoteId, setActiveNoteId] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [scale, setScale] = useState(1);
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
@@ -88,6 +95,19 @@ export default function BoardPage() {
       window.removeEventListener("resize", updateSize);
     };
   }, []); // Remove showMembersPanel dependency
+
+  // Close mobile menu on resize to desktop
+  useEffect(() => {
+    function handleResize() {
+      if (window.innerWidth >= 1024) {
+        setShowMobileMenu(false);
+        setShowMobileHelpModal(false);
+      }
+    }
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Force Stage re-render when notes change to ensure proper rendering
   useEffect(() => {
@@ -222,6 +242,43 @@ export default function BoardPage() {
     };
   }, []);
 
+  // Touch events for mobile panning - simplified approach
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    
+    const handleTouchStart = (e) => {
+      if (e.touches.length === 1) {
+        // Single finger - enable stage dragging
+        const pos = stage.getPointerPosition();
+        const clickedOnStage = stage === stage.getIntersection(pos);
+        
+        if (clickedOnStage) {
+          stage.draggable(true);
+        }
+      } else {
+        // Multiple fingers - disable stage dragging for pinch zoom
+        stage.draggable(false);
+      }
+    };
+
+    const handleTouchEnd = () => {
+      // Re-enable/disable stage dragging based on current state
+      stage.draggable(isPanning);
+    };
+
+    if (containerRef.current) {
+      const container = containerRef.current;
+      container.addEventListener("touchstart", handleTouchStart, { passive: true });
+      container.addEventListener("touchend", handleTouchEnd, { passive: true });
+      
+      return () => {
+        container.removeEventListener("touchstart", handleTouchStart);
+        container.removeEventListener("touchend", handleTouchEnd);
+      };
+    }
+  }, [isPanning]);
+
   useEffect(() => {
     if (!boardId) return;
     function onNoteCreated(p) {
@@ -268,6 +325,8 @@ export default function BoardPage() {
     if (newX !== note.x || newY !== note.y) {
       socket.emit("note:update", boardId, note.id, { x: newX, y: newY });
     }
+
+    // Note: Note component now handles clearing activeNoteId on mobile
   };
 
   if (boardLoading) {
@@ -323,20 +382,144 @@ export default function BoardPage() {
           ref={containerRef}
           className="flex-1 relative bg-gradient-to-br from-blue-50 via-white to-indigo-50"
         >
-          {/* Back button - floating in top-left */}
-          <div className="absolute top-4 left-4 z-10">
-            <button
-              onClick={() => navigate("/boards")}
-              className="bg-white hover:bg-gray-50 text-gray-600 hover:text-gray-900 p-3 rounded-lg shadow-lg border border-gray-200 transition-all flex items-center gap-2"
-              title="Back to boards"
-            >
-              <ArrowLeft size={20} />
-              Back
-            </button>
+          {/* Mobile header bar */}
+          <div className="absolute top-0 left-0 right-0 z-20 lg:hidden">
+            <div className="bg-white/95 backdrop-blur-sm border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => navigate("/boards")}
+                  className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-gray-900 transition-colors flex items-center gap-2"
+                  title="Back to boards"
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                
+                {/* Board title */}
+                <div className="flex flex-col">
+                  <h1 className="text-lg font-bold text-gray-900 truncate max-w-[200px]">
+                    {board?.title || "Loading..."}
+                  </h1>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                {/* Online indicator - mobile */}
+                <div className="flex items-center gap-1 px-2 py-1 bg-green-50 border border-green-200 rounded-md">
+                  <Circle size={6} className="text-green-500 fill-current" />
+                  <span className="text-xs text-green-700 font-medium">{online.length}</span>
+                </div>
+                
+                {/* Help button - mobile */}
+                <button
+                  onClick={() => {
+                    setShowMobileHelpModal(true);
+                    setShowMobileMenu(false); // Close menu when opening help
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-gray-900 transition-colors"
+                  title="Help"
+                >
+                  <HelpCircle size={18} />
+                </button>
+                
+                {/* Mobile menu toggle */}
+                <button
+                  onClick={() => {
+                    setShowMobileMenu(!showMobileMenu);
+                  }}
+                  className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 hover:text-gray-900 transition-colors"
+                >
+                  <Menu size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* Mobile menu dropdown */}
+            {showMobileMenu && (
+              <div className="absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-lg">
+                <div className="p-4 space-y-3">
+                  {/* Zoom controls - mobile */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-gray-700">Zoom</span>
+                    <div className="flex items-center bg-gray-50 rounded-lg overflow-hidden">
+                      <button
+                        onClick={handleZoomOut}
+                        className="px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center"
+                      >
+                        <ZoomOut size={14} />
+                      </button>
+                      <div className="px-3 py-2 text-xs text-gray-700 border-x border-gray-200">
+                        {Math.round(scale * 100)}%
+                      </div>
+                      <button
+                        onClick={handleZoomIn}
+                        className="px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center"
+                      >
+                        <ZoomIn size={14} />
+                      </button>
+                      <button
+                        onClick={handleResetZoom}
+                        className="px-3 py-2 text-gray-500 hover:bg-gray-100 border-l border-gray-200 flex items-center"
+                        title="Reset zoom"
+                      >
+                        <RotateCcw size={14} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Actions - mobile */}
+                  <div className="flex gap-2">
+                    {isOwner && (
+                      <button
+                        onClick={() => {
+                          setShowInviteModal(true);
+                          setShowMobileMenu(false);
+                        }}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                      >
+                        <UserPlus size={16} />
+                        Invite
+                      </button>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setShowMembersPanel(true);
+                        setShowMobileMenu(false);
+                      }}
+                      className="flex-1 bg-white hover:bg-gray-50 text-gray-700 border border-gray-200 px-3 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+                    >
+                      <Users size={16} />
+                      Members
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
-          {/* Floating toolbar - top-right */}
-          <div className="absolute top-4 right-4 z-10 flex items-center space-x-3">
+          {/* Desktop back button and title - floating in top-left */}
+          <div className="absolute top-4 left-4 z-10 hidden lg:block">
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => navigate("/boards")}
+                className="bg-white hover:bg-gray-50 text-gray-600 hover:text-gray-900 p-3 rounded-lg shadow-lg border border-gray-200 transition-all flex items-center gap-2"
+                title="Back to boards"
+              >
+                <ArrowLeft size={20} />
+                Back
+              </button>
+              
+              {/* Board title */}
+              <div className="bg-white/95 backdrop-blur-sm border border-gray-200 shadow-lg rounded-lg px-4 py-3">
+                <h1 className="text-xl font-bold text-gray-900 max-w-[300px] truncate">
+                  {board?.title || "Loading..."}
+                </h1>
+              </div>
+            </div>
+          </div>
+
+          {/* Desktop floating toolbar - top-right */}
+          <div className="absolute top-4 right-4 z-10 hidden lg:flex items-center space-x-3">
             {/* Online users indicator */}
             <div className="flex items-center space-x-2 px-3 py-2 bg-white border border-gray-200 rounded-lg shadow-lg">
               <Circle size={8} className="text-green-500 fill-current" />
@@ -395,9 +578,9 @@ export default function BoardPage() {
             </button>
           </div>
 
-          {/* Floating Add Note toolbar - left side */}
-          <div className="absolute left-4 top-1/2 transform -translate-y-1/2 z-10">
-            <div className="flex flex-col items-center space-y-3 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+          {/* Floating Add Note button - responsive positioning */}
+          <div className="absolute z-10 lg:left-4 lg:top-1/2 lg:transform lg:-translate-y-1/2 bottom-6 right-6 lg:bottom-auto lg:right-auto">
+            <div className="flex lg:flex-col items-center lg:items-center space-x-3 lg:space-x-0 lg:space-y-3 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
               <button
                 onClick={() => {
                   if (!joined) return;
@@ -427,113 +610,133 @@ export default function BoardPage() {
                 }}
                 disabled={!joined}
                 title={!joined ? "Connecting..." : "Add Note"}
-                className="relative inline-flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium text-sm text-white bg-gradient-to-r from-blue-600 to-blue-500 shadow-[0_4px_14px_0_rgba(59,130,246,0.35)] hover:shadow-[0_6px_20px_rgba(59,130,246,0.4)] hover:scale-[1.03] active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 ease-in-out"
+                className="relative inline-flex items-center gap-2 px-3 py-2 lg:px-4 lg:py-2.5 rounded-xl font-medium text-sm text-white bg-gradient-to-r from-blue-600 to-blue-500 shadow-[0_4px_14px_0_rgba(59,130,246,0.35)] hover:shadow-[0_6px_20px_rgba(59,130,246,0.4)] hover:scale-[1.03] active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 ease-in-out"
               >
                 <Plus size={18} className="stroke-[2.5]" />
-                <span>Add Note</span>
+                <span className=" sm:inline">Add Note</span>
               </button>
 
-              {/* Placeholder for future tools */}
-              <div className="text-xs text-gray-400 text-center">
+              {/* Placeholder for future tools - hidden on mobile */}
+              <div className="text-xs text-gray-400 text-center hidden lg:block">
                 More tools coming soon
               </div>
             </div>
           </div>
           {canvasSize.width > 0 && canvasSize.height > 0 && (
-            <Stage
-              key={`stage-${notes.length}`} // Force re-mount when notes change
-              ref={stageRef}
-              width={canvasWidth}
-              height={canvasSize.height}
-              scaleX={scale}
-              scaleY={scale}
-              x={stagePosition.x}
-              y={stagePosition.y}
-              draggable={isPanning || isMiddlePanning}
-              onDragStart={(e) => {
-                setDragStartTarget(e.target);
-              }}
-              onDragEnd={(e) => {
-                // Only update stage position if drag started on Stage background
-                if (dragStartTarget === e.target.getStage()) {
-                  setStagePosition({ x: e.target.x(), y: e.target.y() });
-                }
-                setDragStartTarget(null);
-              }}
-              onWheel={(e) => {
-                e.evt.preventDefault();
-                const scaleBy = 1.1;
-                const stage = e.target.getStage();
-                const oldScale = stage.scaleX();
-                const pointer = stage.getPointerPosition();
+            <div className="absolute inset-0 pt-16 lg:pt-0">
+              <Stage
+                key={`stage-${notes.length}`} // Force re-mount when notes change
+                ref={stageRef}
+                width={canvasWidth}
+                height={canvasSize.height - (typeof window !== 'undefined' && window.innerWidth < 1024 ? 64 : 0)} // Account for mobile header
+                scaleX={scale}
+                scaleY={scale}
+                x={stagePosition.x}
+                y={stagePosition.y}
+                draggable={true} // Always enable dragging, but control it via touch/mouse events
+                onDragStart={(e) => {
+                  setDragStartTarget(e.target);
+                }}
+                onDragEnd={(e) => {
+                  // Only update stage position if drag started on Stage background
+                  if (dragStartTarget === e.target.getStage()) {
+                    setStagePosition({ x: e.target.x(), y: e.target.y() });
+                  }
+                  setDragStartTarget(null);
+                }}
+                onWheel={(e) => {
+                  e.evt.preventDefault();
+                  const scaleBy = 1.1;
+                  const stage = e.target.getStage();
+                  const oldScale = stage.scaleX();
+                  const pointer = stage.getPointerPosition();
 
-                const mousePointTo = {
-                  x: (pointer.x - stage.x()) / oldScale,
-                  y: (pointer.y - stage.y()) / oldScale,
-                };
+                  const mousePointTo = {
+                    x: (pointer.x - stage.x()) / oldScale,
+                    y: (pointer.y - stage.y()) / oldScale,
+                  };
 
-                let newScale =
-                  e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
-                newScale = Math.max(0.5, Math.min(3, newScale));
+                  let newScale =
+                    e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
+                  newScale = Math.max(0.5, Math.min(3, newScale));
 
-                setScale(newScale);
+                  setScale(newScale);
 
-                const newPos = {
-                  x: pointer.x - mousePointTo.x * newScale,
-                  y: pointer.y - mousePointTo.y * newScale,
-                };
+                  const newPos = {
+                    x: pointer.x - mousePointTo.x * newScale,
+                    y: pointer.y - mousePointTo.y * newScale,
+                  };
 
-                setStagePosition(newPos);
-              }}
-              onMouseDown={(e) => {
-                // Only enable stage dragging if clicking on empty background
-                if (e.target === e.target.getStage()) {
-                  if (e.evt.button === 1) setIsMiddlePanning(true); // middle click
-                  const container = stageRef.current?.container();
-                  if (container && (isPanning || e.evt.button === 1))
-                    container.style.cursor = "grabbing";
-                } else {
-                  // Clicked on a note - disable stage dragging temporarily
+                  setStagePosition(newPos);
+                }}
+                onMouseDown={(e) => {
+                  // Only enable stage dragging if clicking on empty background
+                  if (e.target === e.target.getStage()) {
+                    if (e.evt.button === 1) setIsMiddlePanning(true); // middle click
+                    const container = stageRef.current?.container();
+                    if (container && (isPanning || e.evt.button === 1))
+                      container.style.cursor = "grabbing";
+                  } else {
+                    // Clicked on a note - disable stage dragging temporarily
+                    const stage = stageRef.current;
+                    if (stage) {
+                      e.cancelBubble = true;
+                      // Don't prevent stage dragging on mobile for notes
+                      if (!('ontouchstart' in window)) {
+                        stage.draggable(false);
+                      }
+                    }
+                  }
+                }}
+                onMouseUp={() => {
+                  setIsMiddlePanning(false);
+                  // Re-enable stage dragging
                   const stage = stageRef.current;
-                  if (stage) stage.draggable(false);
-                }
-              }}
-              onMouseUp={() => {
-                setIsMiddlePanning(false);
-                // Re-enable stage dragging
-                const stage = stageRef.current;
-                if (stage) stage.draggable(isPanning || isMiddlePanning);
+                  if (stage) stage.draggable(true);
 
-                const container = stageRef.current?.container();
-                if (container)
-                  container.style.cursor = isPanning ? "grab" : "default";
-              }}
-              onMouseEnter={() => {
-                const container = stageRef.current?.container();
-                if (container && (isPanning || isMiddlePanning))
-                  container.style.cursor = "grab";
-              }}
-              onMouseLeave={() => {
-                setIsMiddlePanning(false);
-                const container = stageRef.current?.container();
-                if (container) container.style.cursor = "default";
-              }}
-            >
-              <Layer>
-                {notes.map((note) => (
-                  <Note
-                    key={note.id}
-                    note={note}
-                    boardId={boardId}
-                    onDragEnd={(e) => handleNoteDragEnd(e, note)}
-                  />
-                ))}
-              </Layer>
-            </Stage>
+                  const container = stageRef.current?.container();
+                  if (container)
+                    container.style.cursor = isPanning ? "grab" : "default";
+                }}
+                onMouseEnter={() => {
+                  const container = stageRef.current?.container();
+                  if (container && (isPanning || isMiddlePanning))
+                    container.style.cursor = "grab";
+                }}
+                onMouseLeave={() => {
+                  setIsMiddlePanning(false);
+                  const container = stageRef.current?.container();
+                  if (container) container.style.cursor = "default";
+                }}
+                onTouchStart={(e) => {
+                  // Handle touch events for mobile
+                  if (e.evt.touches.length === 1) {
+                    // Single finger tap on background
+                    if (e.target === e.target.getStage()) {
+                      setShowMobileMenu(false); // Hide mobile menu when tapping canvas
+                      setActiveNoteId(null); // Hide any active note controls
+                    }
+                  }
+                }}
+              >
+                <Layer>
+                  {notes.map((note) => (
+                    <Note
+                      key={note.id}
+                      note={note}
+                      boardId={boardId}
+                      onDragEnd={(e) => handleNoteDragEnd(e, note)}
+                      activeNoteId={activeNoteId}
+                      setActiveNoteId={setActiveNoteId}
+                    />
+                  ))}
+                </Layer>
+              </Stage>
+            </div>
           )}
 
-          {/* Help overlay - bottom left */}
-          <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-3 shadow-lg pointer-events-none select-none z-10">
+          {/* Help overlay - bottom left - hidden on mobile */}
+          <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-lg p-3 shadow-lg pointer-events-none select-none z-10 hidden lg:block">
             <h4 className="text-xs font-semibold text-gray-800 mb-2">
               Controls
             </h4>
@@ -555,14 +758,23 @@ export default function BoardPage() {
           </div>
 
           {notes.length === 0 && (
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <div className="text-center bg-white/80 backdrop-blur-sm rounded-xl p-8 shadow-lg border border-gray-200">
+            <div className="absolute inset-0 pt-16 lg:pt-0 flex items-center justify-center pointer-events-none">
+              <div className="text-center bg-white/80 backdrop-blur-sm rounded-xl p-6 lg:p-8 shadow-lg border border-gray-200 mx-4">
                 <div className="text-3xl mb-2">💡</div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">
                   Start Creating
                 </h3>
-                <p className="text-gray-600 mb-2">
-                  Use the + button on the left to create your first note
+                <p className="text-gray-600 mb-2 text-sm lg:text-base">
+                  <span className="hidden lg:inline">Use the + button on the left to create your first note</span>
+                  <span className="lg:hidden">Tap the + button to add your first note</span>
+                </p>
+                <p className="text-xs text-gray-500 lg:hidden mt-2">
+                  <button 
+                    onClick={() => setShowMobileHelpModal(true)}
+                    className="text-blue-600 underline"
+                  >
+                    Tap here for mobile controls help
+                  </button>
                 </p>
               </div>
             </div>
@@ -574,12 +786,12 @@ export default function BoardPage() {
           <>
             {/* Backdrop */}
             <div
-              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm bg-opacity-50 z-40"
               onClick={() => setShowMembersPanel(false)}
             />
 
             {/* Sidebar */}
-            <div className="fixed top-0 right-0 h-full w-80 bg-white shadow-xl z-50 flex flex-col">
+            <div className="fixed top-0 right-0 h-full w-full sm:w-96 lg:w-80 bg-white shadow-xl z-50 flex flex-col">
               <div className="p-4 border-b border-gray-200 flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <Users size={20} />
@@ -619,6 +831,10 @@ export default function BoardPage() {
         isOpen={showInviteModal}
         onClose={() => setShowInviteModal(false)}
         boardId={boardId}
+      />
+      <MobileHelpModal
+        isOpen={showMobileHelpModal}
+        onClose={() => setShowMobileHelpModal(false)}
       />
     </div>
   );

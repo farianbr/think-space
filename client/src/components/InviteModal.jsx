@@ -38,7 +38,7 @@ export default function InviteModal({ isOpen, onClose, boardId }) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
         {/* Modal Header */}
         <div className="p-6 border-b border-gray-200">
@@ -73,7 +73,8 @@ export default function InviteModal({ isOpen, onClose, boardId }) {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="colleague@company.com"
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-base"
+              style={{ fontSize: "16px" }} // Prevent zoom on iOS
               disabled={inviteMutation.isPending}
               required
             />

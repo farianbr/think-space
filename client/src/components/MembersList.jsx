@@ -44,9 +44,20 @@ export default function MembersList({ boardId, boardOwnerId }) {
     );
   }
 
+  // Sort members to show owner first
+  const sortedMembers = [...members].sort((a, b) => {
+    // Owner comes first
+    if (a.userId === boardOwnerId) return -1;
+    if (b.userId === boardOwnerId) return 1;
+    // Then sort alphabetically by name or email
+    const aName = a.user?.name || a.user?.email || '';
+    const bName = b.user?.name || b.user?.email || '';
+    return aName.localeCompare(bName);
+  });
+
   return (
     <div className="space-y-3">
-      {members.map((m) => (
+      {sortedMembers.map((m) => (
         <div
           key={m.id}
           className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"

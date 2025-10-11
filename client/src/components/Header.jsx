@@ -18,7 +18,7 @@ export default function Header() {
           to="/"
           className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
         >
-          💡 ThinkSpace
+          💡 Think Space
         </Link>
 
         {/* Navigation Links */}
@@ -28,13 +28,13 @@ export default function Header() {
               to="/boards"
               className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
             >
-              My Boards
+              Dashboard
             </Link>
             <Link
               to="/boards"
               className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
             >
-              Recent
+              Archive
             </Link>
           </nav>
         )}
