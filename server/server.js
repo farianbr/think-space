@@ -18,7 +18,12 @@ const server = http.createServer(app);
 
 // security + JSON parsing
 app.use(helmet());
-app.use(cors({ origin: ["http://localhost:5173"], credentials: true }));
+app.use(
+  cors({
+    origin: ["http://localhost:5173", "http://localhost:5174", "http://192.168.0.218:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
 
 // REST routes
@@ -30,7 +35,7 @@ app.use("/api/boards", boardMembersRouter);
 // Socket.io setup
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:5173",
+    origin: ["http://localhost:5173", "http://localhost:5174", "http://192.168.0.218:5173"],
     methods: ["GET", "POST"],
     credentials: true,
   },

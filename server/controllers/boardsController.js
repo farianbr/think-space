@@ -79,3 +79,38 @@ export async function deleteBoard(req, res) {
 
   res.json({ ok: true });
 }
+
+/**
+ * GET /api/boards/:boardId
+ * Get board details if user has access
+ */
+export async function getBoardById(req, res) {
+  try {
+    const boardId = req.params.boardId;
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+
+    const board = await prisma.board.findUnique({
+      where: { id: boardId },
+      include: {
+        owner: { select: { id: true, name: true, email: true } },
+        _count: { select: { notes: true, members: true } },
+      },
+    });
+
+    if (!board) return res.status(404).json({ message: "Board not found" });
+
+    // Check if user has access (owner or member)
+    if (board.ownerId !== userId) {
+      const member = await prisma.boardMember.findFirst({
+        where: { boardId, userId },
+      });
+      if (!member) return res.status(403).json({ message: "Forbidden" });
+    }
+
+    return res.json({ board });
+  } catch (err) {
+    console.error("getBoardById error", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}

@@ -4,8 +4,12 @@ import { getToken } from "./auth";
 export const socket = io("http://localhost:4000", {
   withCredentials: true,
   autoConnect: false,
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 500,
+  transports: ["polling", "websocket"],
   auth: {
-    token: getToken() || "",   // send token on first connect
+    token: getToken() || "", // will be refreshed on connect
   },
 });
 
@@ -16,5 +20,26 @@ export function setSocketAuthFromStorage() {
 
 // connect when app starts (or after login)
 export function connectSocket() {
-  if (!socket.connected) socket.connect();
+  // ALWAYS refresh auth before connecting to avoid stale or missing token
+  setSocketAuthFromStorage();
+  if (!socket.connected) {
+    socket.connect();
+  } else {
+    // If already connected but auth changed, reconnect with new auth
+    const currentToken = getToken();
+    if (socket.auth?.token !== currentToken) {
+      socket.disconnect();
+      setSocketAuthFromStorage();
+      socket.connect();
+    }
+  }
+}
+
+// Force reconnect with fresh auth (useful after login)
+export function reconnectSocket() {
+  setSocketAuthFromStorage();
+  if (socket.connected) {
+    socket.disconnect();
+  }
+  socket.connect();
 }

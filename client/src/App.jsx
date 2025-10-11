@@ -4,6 +4,7 @@ import Home from "./pages/Home";
 import BoardsDashboard from "./pages/BoardsDashboard";
 import BoardPage from "./pages/BoardPage";
 import Header from "./components/Header";
+import { Toaster } from "react-hot-toast";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import { AuthProvider } from "./contexts/AuthProvider";
@@ -11,11 +12,11 @@ import RequireAuth from "./components/RequireAuth";
 
 function AppContent() {
   const location = useLocation();
-  const isHomePage = location.pathname === "/";
+  const isDashboard = location.pathname === "/boards";
 
   return (
     <>
-      {!isHomePage && <Header />}
+      {isDashboard && <Header />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<LoginPage />} />
@@ -48,6 +49,7 @@ function AppContent() {
 export default function App() {
   return (
     <AuthProvider>
+      <Toaster  toastOptions={{ duration: 2500 }} />
       <AppContent />
     </AuthProvider>
   );

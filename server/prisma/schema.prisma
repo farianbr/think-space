@@ -27,6 +27,8 @@ model Note {
   text      String   @default("")
   x         Int      @default(100)
   y         Int      @default(100)
+  width     Int      @default(180)
+  height    Int      @default(120)
   color     String   @default("#fde047") // yellow-300
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

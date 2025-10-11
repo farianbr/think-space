@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
       return;
     }
     let mounted = true;
-    // use axios api client which handles the baseURL and auth headers
+
     api
       .get("/auth/me")
       .then((response) => {
@@ -40,6 +40,10 @@ export function AuthProvider({ children }) {
       saveAuth(data);
       setToken(data.token);
       setUser(data.user || data);
+      // Reconnect socket with new auth after successful login
+      import("../lib/socket")
+        .then((m) => m.reconnectSocket && m.reconnectSocket())
+        .catch((err) => console.debug("socket reconnect failed", err));
     }
     return data;
   };

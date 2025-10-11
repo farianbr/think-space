@@ -29,7 +29,7 @@ export function useCreateBoard() {
       const res = await api.post("/boards", payload);
       return res.data.board;
     },
-    onSuccess: (board) => {
+    onSuccess: () => {
       // optimistic approach: refetch list
       qc.invalidateQueries({ queryKey: ["myBoards"] });
       // optionally navigate to newly created board; the app should handle that after mutation returns
@@ -73,7 +73,7 @@ export function useBoardsSocket() {
       );
     }
 
-    function onBoardAdded(payload) {
+    function onBoardAdded() {
       // simple: refetch myBoards to pick up the new board
       qc.invalidateQueries({ queryKey: ["myBoards"] });
     }

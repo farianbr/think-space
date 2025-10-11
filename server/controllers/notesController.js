@@ -38,6 +38,8 @@ export async function updateNote(boardId, noteId, patch) {
   if (typeof patch?.text === "string") data.text = patch.text;
   if (Number.isFinite(patch?.x)) data.x = Math.round(patch.x);
   if (Number.isFinite(patch?.y)) data.y = Math.round(patch.y);
+  if (Number.isFinite(patch?.width)) data.width = Math.max(100, Math.round(patch.width));
+  if (Number.isFinite(patch?.height)) data.height = Math.max(60, Math.round(patch.height));
   if (typeof patch?.color === "string") data.color = patch.color;
 
   if (Object.keys(data).length === 0) {
