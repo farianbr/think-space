@@ -306,6 +306,9 @@ export default function BoardPage() {
     if (!boardId) return;
     function onNoteCreated(p) {
       if (!p || p.boardId !== boardId) return;
+      // Ignore server echoes for notes created by this socket - we already
+      // inserted an optimistic note locally. Server includes socketId in payload.
+      if (p.socketId && p.socketId === socket.id) return;
       setNotes((prev) => [...prev, p.note]);
     }
     function onNoteUpdated(p) {
@@ -326,18 +329,43 @@ export default function BoardPage() {
     };
   }, [boardId]);
 
+  // Create note at specified position (throttled)
   const createNote = throttle((x, y) => {
     if (!boardId || !joined) return;
+
     const newNote = {
       text: "",
       x: Math.max(20, Math.min(x - 70, canvasSize.width - 160)),
       y: Math.max(20, Math.min(y - 45, canvasSize.height - 110)),
       color: "#fef3c7",
+      width: 180,
+      height: 120,
     };
-    socket.emit("note:create", boardId, newNote);
+
+    // Emit create request to server
+    socket.emit("note:create", boardId, newNote, (ack) => {
+      if (ack && ack.ok && ack.note) {
+        // Directly update local state when server confirms
+        setNotes((prev) => [...prev, ack.note]);
+      } else {
+        toast.error(ack?.message || "Failed to create note");
+      }
+    });
   }, 200);
 
-  // Removed double-click create per request
+  // Request note deletion (with server confirmation)
+  const requestDeleteNote = (noteId) => {
+    if (!boardId || !joined) return;
+
+    socket.emit("note:delete", boardId, noteId, (ack) => {
+      if (ack && ack.ok) {
+        // Only update UI after server confirms deletion
+        setNotes((prev) => prev.filter((n) => n.id !== noteId));
+      } else {
+        toast.error(ack?.message || "Failed to delete note");
+      }
+    });
+  };
 
   // Optimistic update for text and color changes (similar to drag updates)
   const handleOptimisticUpdate = (noteId, updates) => {
@@ -763,6 +791,7 @@ export default function BoardPage() {
                       onDragEnd={(e) => handleNoteDragEnd(e, note)}
                       activeNoteId={activeNoteId}
                       setActiveNoteId={setActiveNoteId}
+                      onRequestDelete={requestDeleteNote}
                       onOptimisticUpdate={handleOptimisticUpdate}
                     />
                   ))}

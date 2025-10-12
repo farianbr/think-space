@@ -16,7 +16,7 @@ const PALETTE = [
 
 import { throttle } from "../lib/throttle";
 
-export default function Note({ note, boardId, onDragStart, onDragEnd, activeNoteId, setActiveNoteId, onOptimisticUpdate }) {
+export default function Note({ note, boardId, onDragStart, onDragEnd, activeNoteId, setActiveNoteId, onOptimisticUpdate, onRequestDelete }) {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(note.text);
   const [showPalette, setShowPalette] = useState(false);
@@ -27,8 +27,8 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   const [isMobile, setIsMobile] = useState(false);
   const textareaRef = useRef(null);
   const [noteSize, setNoteSize] = useState({
-    width: note.width || 140,
-    height: note.height || 90,
+    width: note.width || 180,
+    height: note.height || 120,
   });
 
   // Refs for managing state and positions
@@ -39,8 +39,8 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   const initialResizeData = useRef(null);
 
   const lastEmittedSizeRef = useRef({
-    width: note.width || 140,
-    height: note.height || 90,
+    width: note.width || 180,
+    height: note.height || 120,
   });
 
 
@@ -189,7 +189,8 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   }
 
   function handleDelete() {
-    socket.emit("note:delete", boardId, note.id);
+          onRequestDelete(note.id);
+
   }
 
   function togglePalette() {

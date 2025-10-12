@@ -17,6 +17,7 @@ export function registerNotesSocket(io, socket) {
         boardId,
         note,
         actorId: socket.user?.id,
+        socketId: socket.id,
       });
       ack?.({ ok: true, note });
     } catch (err) {
