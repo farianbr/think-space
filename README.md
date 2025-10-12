@@ -13,7 +13,7 @@ ThinkSpace is a simple collaborative whiteboard app for creating and arranging s
 
 - Frontend: React, Vite, Tailwind, react-konva
 - Backend: Node.js, Express, Socket.io
-- Database: PostgreSQL + Prisma
+- Database: PostgreSQL (Supabase) + Prisma
 
 ## Future improvements
 
