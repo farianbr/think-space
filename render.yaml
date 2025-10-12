@@ -1,9 +1,7 @@
 services:
-  # PostgreSQL Database
-  - type: pserv
+  # PostgreSQL Database (use Render's postgres service)
+  - type: postgres
     name: thinkspace-db
-    databaseName: thinkspace
-    user: thinkspace
     plan: free
     
   # Backend API Server
