@@ -10,18 +10,18 @@ export default function InviteModal({ isOpen, onClose, boardId }) {
 
   const inviteMutation = useMutation({
     mutationFn: async ({ email }) => {
-      // POST /api/boards/:boardId/members/invite
+      // POST /api/boards/:boardId/members/invite (adds member by email)
       const res = await api.post(`/boards/${boardId}/members/invite`, { email });
       return res.data;
     },
     onSuccess: () => {
-      toast.success("Invitation sent! 📧");
+      toast.success("Member added!");
       qc.invalidateQueries({ queryKey: ["boardMembers", boardId] });
       setEmail("");
       onClose();
     },
     onError: (err) => {
-      const errorMsg = err.response?.data?.error || "Failed to send invitation";
+      const errorMsg = err.response?.data?.message || "Failed to add member";
       toast.error(errorMsg);
     },
   });
@@ -46,10 +46,10 @@ export default function InviteModal({ isOpen, onClose, boardId }) {
             <div>
               <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                 <Mail size={20} />
-                Invite Team Member
+                Add Team Member
               </h2>
               <p className="text-sm text-gray-600 mt-1">
-                Send an invitation to collaborate on this board
+                Add a member to collaborate on this board
               </p>
             </div>
             <button
@@ -98,12 +98,12 @@ export default function InviteModal({ isOpen, onClose, boardId }) {
               {inviteMutation.isPending ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Sending...</span>
+                  <span>Adding...</span>
                 </>
               ) : (
                 <>
                   <Send size={16} />
-                  <span>Send Invite</span>
+                  <span>Add Member</span>
                 </>
               )}
             </button>

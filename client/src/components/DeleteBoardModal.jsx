@@ -91,7 +91,7 @@ export default function DeleteBoardModal({ isOpen, onClose, onConfirm, boardTitl
         {/* Additional Warning */}
         <div className="mt-4 text-center">
           <p className="text-xs text-slate-500">
-            💡 Consider downloading or backing up important data before deletion
+            💡 Consider backing up important data before deletion
           </p>
         </div>
       </div>

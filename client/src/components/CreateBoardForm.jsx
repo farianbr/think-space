@@ -19,6 +19,8 @@ export default function CreateBoardForm({ onCreated } = {}) {
     }
   };
 
+  
+
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-300">
       <div className="flex items-center mb-6">
@@ -48,7 +50,7 @@ export default function CreateBoardForm({ onCreated } = {}) {
               placeholder="e.g., Project Planning, Team Brainstorm, Design Ideas..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              disabled={create.isLoading}
+              disabled={create.isPending}
             />
             <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
               <ArrowRight size={16} className={`transition-colors ${title.trim() ? 'text-blue-500' : 'text-slate-300'}`} />
@@ -66,10 +68,10 @@ export default function CreateBoardForm({ onCreated } = {}) {
 
         <button
           type="submit"
-          disabled={create.isLoading || !title.trim()}
+          disabled={create.isPending || !title.trim()}
           className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 disabled:from-slate-300 disabled:to-slate-400 disabled:cursor-not-allowed text-white font-semibold py-3.5 px-6 rounded-xl transition-all duration-200 flex items-center justify-center shadow-lg hover:shadow-xl transform hover:scale-[1.02] disabled:transform-none"
         >
-          {create.isLoading ? (
+          {create.isPending ? (
             <>
               <div className="animate-spin rounded-full h-5 w-5 border-2 border-white/30 border-t-white mr-3"></div>
               Creating Board...

@@ -125,7 +125,7 @@ export default function Home() {
                 Team Management
               </h3>
               <p className="text-gray-600">
-                Invite team members, manage permissions, and track who's online
+                Add team members, manage permissions, and track who's online
                 and active.
               </p>
             </div>

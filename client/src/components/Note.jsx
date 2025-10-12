@@ -16,7 +16,7 @@ const PALETTE = [
 
 import { throttle } from "../lib/throttle";
 
-export default function Note({ note, boardId, onDragStart, onDragEnd, activeNoteId, setActiveNoteId }) {
+export default function Note({ note, boardId, onDragStart, onDragEnd, activeNoteId, setActiveNoteId, onOptimisticUpdate }) {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(note.text);
   const [showPalette, setShowPalette] = useState(false);
@@ -42,6 +42,7 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
     width: note.width || 140,
     height: note.height || 90,
   });
+
 
   // keep local text synced with server pushes
   useEffect(() => {
@@ -158,6 +159,11 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
     setIsEditing(false);
     const next = value.trim();
     if (next !== note.text) {
+      // Optimistically update text locally for snappier UI (similar to drag/resize)
+      // The socket filtering in BoardPage will prevent redundant updates from server
+      if (onOptimisticUpdate) {
+        onOptimisticUpdate(note.id, { text: next });
+      }
       socket.emit("note:update", boardId, note.id, { text: next });
     }
     
@@ -191,6 +197,11 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   }
 
   function applyColor(colorObj) {
+    // Optimistically update color locally for snappier UI (similar to drag/resize)
+    // The socket filtering in BoardPage will prevent redundant updates from server
+    if (onOptimisticUpdate) {
+      onOptimisticUpdate(note.id, { color: colorObj.color });
+    }
     socket.emit("note:update", boardId, note.id, { color: colorObj.color });
     setShowPalette(false);
     // Clear mobile controls after color change with delay

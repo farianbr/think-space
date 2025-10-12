@@ -1,29 +1,20 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "../../contexts/authContext";
 
 export default function LoginForm({ onSuccess, isDemo }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
-  if (isDemo) {
-    // Pre-fill demo credentials when isDemo is true
-    if (email !== "demo@thinkspace.dev") {
+  // Move demo prefilling into an effect to avoid setState during render
+  useEffect(() => {
+    if (isDemo) {
       setEmail("demo@thinkspace.dev");
-    }
-    if (password !== "demo1234") {
       setPassword("demo1234");
-    }
-  }
-  else {
-    // Clear fields when isDemo is false
-    if (email !== "") {
+    } else {
       setEmail("");
-    }
-    if (password !== "") {
       setPassword("");
     }
-  }
+  }, [isDemo]);
 
   const { login } = useAuth();
 
