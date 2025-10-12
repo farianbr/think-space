@@ -75,8 +75,6 @@ export default function BoardPage() {
     staleTime: 5_000,
   });
 
-  console.log(notesFallback);
-
   useEffect(() => {
     function updateSize() {
       if (containerRef.current) {

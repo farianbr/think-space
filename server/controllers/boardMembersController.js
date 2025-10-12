@@ -104,7 +104,6 @@ export async function addBoardMember(req, res) {
     });
 
     if (existingMember) {
-      console.log("Already a member");
       return res
         .status(200)
         .json({ member: existingMember, message: "Already a member" });

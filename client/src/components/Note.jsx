@@ -52,7 +52,6 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 1024 || 'ontouchstart' in window;
-      console.log('Mobile detection:', mobile, 'width:', window.innerWidth, 'touch:', 'ontouchstart' in window);
       setIsMobile(mobile);
     };
     
@@ -103,7 +102,6 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   }, []);
 
   function startEdit() {
-    console.log('startEdit called - from where?', new Error().stack);
     setShowPalette(false);
     setIsEditing(true);
   }
@@ -124,18 +122,14 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
     const now = Date.now();
     const timeDiff = now - lastTapTime;
     
-    console.log('handleTap - isMobile:', isMobile, 'timeDiff:', timeDiff, 'lastTapTime:', lastTapTime);
-    
     if (isMobile) {
       // Check for double tap: must be within 300ms AND lastTapTime must not be 0
       if (timeDiff < 300 && lastTapTime > 0) {
         // Double tap detected - start editing
-        console.log('Double tap detected - starting edit');
         startEdit();
         setLastTapTime(0); // Reset to prevent triple tap
       } else {
         // Single tap - show/hide controls on mobile
-        console.log('Single tap - toggling controls');
         if (activeNoteId === note.id) {
           setActiveNoteId(null);
         } else {
