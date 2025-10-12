@@ -16,7 +16,7 @@ const PALETTE = [
 
 import { throttle } from "../lib/throttle";
 
-export default function Note({ note, boardId, onDragStart, onDragEnd, activeNoteId, setActiveNoteId }) {
+export default function Note({ note, boardId, onDragStart, onDragEnd, activeNoteId, setActiveNoteId, onOptimisticUpdate, onRequestDelete }) {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(note.text);
   const [showPalette, setShowPalette] = useState(false);
@@ -27,8 +27,8 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   const [isMobile, setIsMobile] = useState(false);
   const textareaRef = useRef(null);
   const [noteSize, setNoteSize] = useState({
-    width: note.width || 140,
-    height: note.height || 90,
+    width: note.width || 180,
+    height: note.height || 120,
   });
 
   // Refs for managing state and positions
@@ -39,9 +39,10 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   const initialResizeData = useRef(null);
 
   const lastEmittedSizeRef = useRef({
-    width: note.width || 140,
-    height: note.height || 90,
+    width: note.width || 180,
+    height: note.height || 120,
   });
+
 
   // keep local text synced with server pushes
   useEffect(() => {
@@ -52,7 +53,6 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   useEffect(() => {
     const checkMobile = () => {
       const mobile = window.innerWidth < 1024 || 'ontouchstart' in window;
-      console.log('Mobile detection:', mobile, 'width:', window.innerWidth, 'touch:', 'ontouchstart' in window);
       setIsMobile(mobile);
     };
     
@@ -103,7 +103,6 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   }, []);
 
   function startEdit() {
-    console.log('startEdit called - from where?', new Error().stack);
     setShowPalette(false);
     setIsEditing(true);
   }
@@ -124,18 +123,14 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
     const now = Date.now();
     const timeDiff = now - lastTapTime;
     
-    console.log('handleTap - isMobile:', isMobile, 'timeDiff:', timeDiff, 'lastTapTime:', lastTapTime);
-    
     if (isMobile) {
       // Check for double tap: must be within 300ms AND lastTapTime must not be 0
       if (timeDiff < 300 && lastTapTime > 0) {
         // Double tap detected - start editing
-        console.log('Double tap detected - starting edit');
         startEdit();
         setLastTapTime(0); // Reset to prevent triple tap
       } else {
         // Single tap - show/hide controls on mobile
-        console.log('Single tap - toggling controls');
         if (activeNoteId === note.id) {
           setActiveNoteId(null);
         } else {
@@ -164,6 +159,11 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
     setIsEditing(false);
     const next = value.trim();
     if (next !== note.text) {
+      // Optimistically update text locally for snappier UI (similar to drag/resize)
+      // The socket filtering in BoardPage will prevent redundant updates from server
+      if (onOptimisticUpdate) {
+        onOptimisticUpdate(note.id, { text: next });
+      }
       socket.emit("note:update", boardId, note.id, { text: next });
     }
     
@@ -189,7 +189,8 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   }
 
   function handleDelete() {
-    socket.emit("note:delete", boardId, note.id);
+          onRequestDelete(note.id);
+
   }
 
   function togglePalette() {
@@ -197,6 +198,11 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   }
 
   function applyColor(colorObj) {
+    // Optimistically update color locally for snappier UI (similar to drag/resize)
+    // The socket filtering in BoardPage will prevent redundant updates from server
+    if (onOptimisticUpdate) {
+      onOptimisticUpdate(note.id, { color: colorObj.color });
+    }
     socket.emit("note:update", boardId, note.id, { color: colorObj.color });
     setShowPalette(false);
     // Clear mobile controls after color change with delay

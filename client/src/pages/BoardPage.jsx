@@ -45,6 +45,7 @@ export default function BoardPage() {
   const [activeNoteId, setActiveNoteId] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [scale, setScale] = useState(1);
+  const userZoomedRef = useRef(false);
   const [stagePosition, setStagePosition] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
   const [isMiddlePanning, setIsMiddlePanning] = useState(false);
@@ -53,6 +54,28 @@ export default function BoardPage() {
   const containerRef = useRef();
   const joinedRef = useRef(false);
   const leaveTimerRef = useRef(null);
+
+  // Helper to determine min/max scale based on viewport (mobile vs desktop)
+  const getScaleBounds = () => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      // Mobile: 10% - 200%
+      return { minScale: 0.1, maxScale: 2.0 };
+    }
+    // Desktop: 50% - 300% (existing behavior)
+    return { minScale: 0.5, maxScale: 3.0 };
+  };
+
+  // Initial mobile scale: apply a gentle scale on small screens once canvas size is known.
+  // This hook is unconditional and runs early to keep hook ordering consistent.
+  useEffect(() => {
+    if (!canvasSize.width || !canvasSize.height) return;
+    if (userZoomedRef.current) return; // respect user preference
+
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      if (scale === 1) setScale(0.5);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canvasSize.width, canvasSize.height]);
 
   const {
     data: board,
@@ -74,8 +97,6 @@ export default function BoardPage() {
     enabled: !!boardId,
     staleTime: 5_000,
   });
-
-  console.log(notesFallback);
 
   useEffect(() => {
     function updateSize() {
@@ -246,13 +267,13 @@ export default function BoardPage() {
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
-    
+
     const handleTouchStart = (e) => {
       if (e.touches.length === 1) {
         // Single finger - enable stage dragging
         const pos = stage.getPointerPosition();
         const clickedOnStage = stage === stage.getIntersection(pos);
-        
+
         if (clickedOnStage) {
           stage.draggable(true);
         }
@@ -269,9 +290,11 @@ export default function BoardPage() {
 
     if (containerRef.current) {
       const container = containerRef.current;
-      container.addEventListener("touchstart", handleTouchStart, { passive: true });
+      container.addEventListener("touchstart", handleTouchStart, {
+        passive: true,
+      });
       container.addEventListener("touchend", handleTouchEnd, { passive: true });
-      
+
       return () => {
         container.removeEventListener("touchstart", handleTouchStart);
         container.removeEventListener("touchend", handleTouchEnd);
@@ -283,10 +306,13 @@ export default function BoardPage() {
     if (!boardId) return;
     function onNoteCreated(p) {
       if (!p || p.boardId !== boardId) return;
+      // Ignore server echoes for notes created by this socket - we already
+      // inserted an optimistic note locally. Server includes socketId in payload.
+      if (p.socketId && p.socketId === socket.id) return;
       setNotes((prev) => [...prev, p.note]);
     }
     function onNoteUpdated(p) {
-      if (!p || p.boardId !== boardId) return;
+      if (!p || p.boardId !== boardId || p.socketId === socket.id) return;
       setNotes((prev) => prev.map((n) => (n.id === p.note.id ? p.note : n)));
     }
     function onNoteDeleted(p) {
@@ -303,18 +329,50 @@ export default function BoardPage() {
     };
   }, [boardId]);
 
+  // Create note at specified position (throttled)
   const createNote = throttle((x, y) => {
     if (!boardId || !joined) return;
+
     const newNote = {
       text: "",
       x: Math.max(20, Math.min(x - 70, canvasSize.width - 160)),
       y: Math.max(20, Math.min(y - 45, canvasSize.height - 110)),
       color: "#fef3c7",
+      width: 180,
+      height: 120,
     };
-    socket.emit("note:create", boardId, newNote);
+
+    // Emit create request to server
+    socket.emit("note:create", boardId, newNote, (ack) => {
+      if (ack && ack.ok && ack.note) {
+        // Directly update local state when server confirms
+        setNotes((prev) => [...prev, ack.note]);
+      } else {
+        toast.error(ack?.message || "Failed to create note");
+      }
+    });
   }, 200);
 
-  // Removed double-click create per request
+  // Request note deletion (with server confirmation)
+  const requestDeleteNote = (noteId) => {
+    if (!boardId || !joined) return;
+
+    socket.emit("note:delete", boardId, noteId, (ack) => {
+      if (ack && ack.ok) {
+        // Only update UI after server confirms deletion
+        setNotes((prev) => prev.filter((n) => n.id !== noteId));
+      } else {
+        toast.error(ack?.message || "Failed to delete note");
+      }
+    });
+  };
+
+  // Optimistic update for text and color changes (similar to drag updates)
+  const handleOptimisticUpdate = (noteId, updates) => {
+    setNotes((prev) =>
+      prev.map((n) => (n.id === noteId ? { ...n, ...updates } : n))
+    );
+  };
 
   const handleNoteDragEnd = (e, note) => {
     // Get the actual position where the user dropped the note
@@ -324,6 +382,10 @@ export default function BoardPage() {
     // Only emit update if position actually changed
     if (newX !== note.x || newY !== note.y) {
       socket.emit("note:update", boardId, note.id, { x: newX, y: newY });
+      // Optimistically update position locally for snappier UI
+      setNotes((prev) =>
+        prev.map((n) => (n.id === note.id ? { ...n, x: newX, y: newY } : n))
+      );
     }
 
     // Note: Note component now handles clearing activeNoteId on mobile
@@ -366,12 +428,29 @@ export default function BoardPage() {
 
   const isOwner = user && board && user.id === board.ownerId;
   const canvasWidth = canvasSize.width; // Remove members panel width calculation
-  const handleZoomIn = () =>
-    setScale((s) => Math.min(3, parseFloat((s + 0.1).toFixed(2))));
-  const handleZoomOut = () =>
-    setScale((s) => Math.max(0.5, parseFloat((s - 0.1).toFixed(2))));
+  const handleZoomIn = () => {
+    userZoomedRef.current = true;
+    const { maxScale } = getScaleBounds();
+    setScale((s) =>
+      parseFloat(
+        Math.min(maxScale, parseFloat((s + 0.1).toFixed(2))).toFixed(2)
+      )
+    );
+  };
+  const handleZoomOut = () => {
+    userZoomedRef.current = true;
+    const { minScale } = getScaleBounds();
+    setScale((s) =>
+      parseFloat(
+        Math.max(minScale, parseFloat((s - 0.1).toFixed(2))).toFixed(2)
+      )
+    );
+  };
   const handleResetZoom = () => {
-    setScale(1);
+    userZoomedRef.current = true;
+    const { minScale, maxScale } = getScaleBounds();
+    // reset to 1 but clamp into bounds
+    setScale(() => Math.max(minScale, Math.min(maxScale, 1)));
     setStagePosition({ x: 0, y: 0 });
   };
 
@@ -393,7 +472,7 @@ export default function BoardPage() {
                 >
                   <ArrowLeft size={20} />
                 </button>
-                
+
                 {/* Board title */}
                 <div className="flex flex-col">
                   <h1 className="text-lg font-bold text-gray-900 truncate max-w-[200px]">
@@ -401,14 +480,16 @@ export default function BoardPage() {
                   </h1>
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-2">
                 {/* Online indicator - mobile */}
                 <div className="flex items-center gap-1 px-2 py-1 bg-green-50 border border-green-200 rounded-md">
                   <Circle size={6} className="text-green-500 fill-current" />
-                  <span className="text-xs text-green-700 font-medium">{online.length}</span>
+                  <span className="text-xs text-green-700 font-medium">
+                    {online.length}
+                  </span>
                 </div>
-                
+
                 {/* Help button - mobile */}
                 <button
                   onClick={() => {
@@ -420,7 +501,7 @@ export default function BoardPage() {
                 >
                   <HelpCircle size={18} />
                 </button>
-                
+
                 {/* Mobile menu toggle */}
                 <button
                   onClick={() => {
@@ -437,34 +518,7 @@ export default function BoardPage() {
             {showMobileMenu && (
               <div className="absolute top-full left-0 right-0 bg-white border-b border-gray-200 shadow-lg">
                 <div className="p-4 space-y-3">
-                  {/* Zoom controls - mobile */}
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-700">Zoom</span>
-                    <div className="flex items-center bg-gray-50 rounded-lg overflow-hidden">
-                      <button
-                        onClick={handleZoomOut}
-                        className="px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center"
-                      >
-                        <ZoomOut size={14} />
-                      </button>
-                      <div className="px-3 py-2 text-xs text-gray-700 border-x border-gray-200">
-                        {Math.round(scale * 100)}%
-                      </div>
-                      <button
-                        onClick={handleZoomIn}
-                        className="px-3 py-2 text-gray-700 hover:bg-gray-100 flex items-center"
-                      >
-                        <ZoomIn size={14} />
-                      </button>
-                      <button
-                        onClick={handleResetZoom}
-                        className="px-3 py-2 text-gray-500 hover:bg-gray-100 border-l border-gray-200 flex items-center"
-                        title="Reset zoom"
-                      >
-                        <RotateCcw size={14} />
-                      </button>
-                    </div>
-                  </div>
+                  {/* Zoom controls moved to a floating mobile widget (see below) */}
 
                   {/* Actions - mobile */}
                   <div className="flex gap-2">
@@ -477,7 +531,7 @@ export default function BoardPage() {
                         className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
                       >
                         <UserPlus size={16} />
-                        Invite
+                        Add
                       </button>
                     )}
 
@@ -499,19 +553,19 @@ export default function BoardPage() {
 
           {/* Desktop back button and title - floating in top-left */}
           <div className="absolute top-4 left-4 z-10 hidden lg:block">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-5 bg-white/80 backdrop-blur-md border border-gray-100 shadow-sm rounded-xl px-6 py-4 transition-all duration-300 hover:shadow-md">
               <button
                 onClick={() => navigate("/boards")}
-                className="bg-white hover:bg-gray-50 text-gray-600 hover:text-gray-900 p-3 rounded-lg shadow-lg border border-gray-200 transition-all flex items-center gap-2"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg text-gray-600 hover:text-gray-900 hover:border-gray-300 hover:shadow-sm transition-all duration-200 font-medium"
                 title="Back to boards"
               >
-                <ArrowLeft size={20} />
-                Back
+                <ArrowLeft className="w-4 h-4" strokeWidth={2.5} />
+                <span>Back</span>
               </button>
-              
-              {/* Board title */}
-              <div className="bg-white/95 backdrop-blur-sm border border-gray-200 shadow-lg rounded-lg px-4 py-3">
-                <h1 className="text-xl font-bold text-gray-900 max-w-[300px] truncate">
+
+              <div className="ml-2 flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-gray-400/80" />
+                <h1 className="text-3xl lg:text-4xl font-semibold text-gray-900 tracking-tight truncate font-[Inter]">
                   {board?.title || "Loading..."}
                 </h1>
               </div>
@@ -561,7 +615,7 @@ export default function BoardPage() {
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg shadow-lg font-medium transition-colors flex items-center gap-2"
               >
                 <UserPlus size={16} />
-                Invite
+                Add
               </button>
             )}
 
@@ -578,8 +632,8 @@ export default function BoardPage() {
             </button>
           </div>
 
-          {/* Floating Add Note button - responsive positioning */}
-          <div className="absolute z-10 lg:left-4 lg:top-1/2 lg:transform lg:-translate-y-1/2 bottom-6 right-6 lg:bottom-auto lg:right-auto">
+          {/* Floating Add Note button - responsive: mobile bottom-right (lower), desktop left-center */}
+          <div className="absolute z-10 right-6 bottom-16 lg:left-4 lg:top-1/2 lg:transform lg:-translate-y-1/2 lg:right-auto">
             <div className="flex lg:flex-col items-center lg:items-center space-x-3 lg:space-x-0 lg:space-y-3 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
               <button
                 onClick={() => {
@@ -610,10 +664,10 @@ export default function BoardPage() {
                 }}
                 disabled={!joined}
                 title={!joined ? "Connecting..." : "Add Note"}
-                className="relative inline-flex items-center gap-2 px-3 py-2 lg:px-4 lg:py-2.5 rounded-xl font-medium text-sm text-white bg-gradient-to-r from-blue-600 to-blue-500 shadow-[0_4px_14px_0_rgba(59,130,246,0.35)] hover:shadow-[0_6px_20px_rgba(59,130,246,0.4)] hover:scale-[1.03] active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 ease-in-out"
+                className="relative inline-flex items-center gap-2 px-3 py-2 lg:px-4 lg:py-2.5 rounded-xl font-medium text-white bg-gradient-to-r from-blue-600 to-blue-500 shadow-[0_4px_14px_0_rgba(59,130,246,0.35)] hover:shadow-[0_6px_20px_rgba(59,130,246,0.4)] hover:scale-[1.03] active:scale-[0.97] disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200 ease-in-out"
               >
                 <Plus size={18} className="stroke-[2.5]" />
-                <span className=" sm:inline">Add Note</span>
+                <span className="hidden lg:inline">Add Note</span>
               </button>
 
               {/* Placeholder for future tools - hidden on mobile */}
@@ -628,7 +682,12 @@ export default function BoardPage() {
                 key={`stage-${notes.length}`} // Force re-mount when notes change
                 ref={stageRef}
                 width={canvasWidth}
-                height={canvasSize.height - (typeof window !== 'undefined' && window.innerWidth < 1024 ? 64 : 0)} // Account for mobile header
+                height={
+                  canvasSize.height -
+                  (typeof window !== "undefined" && window.innerWidth < 1024
+                    ? 64
+                    : 0)
+                } // Account for mobile header
                 scaleX={scale}
                 scaleY={scale}
                 x={stagePosition.x}
@@ -658,7 +717,11 @@ export default function BoardPage() {
 
                   let newScale =
                     e.evt.deltaY > 0 ? oldScale / scaleBy : oldScale * scaleBy;
-                  newScale = Math.max(0.5, Math.min(3, newScale));
+                  const { minScale, maxScale } = getScaleBounds();
+                  newScale = parseFloat(
+                    Math.max(minScale, Math.min(maxScale, newScale)).toFixed(2)
+                  );
+                  userZoomedRef.current = true;
 
                   setScale(newScale);
 
@@ -682,7 +745,7 @@ export default function BoardPage() {
                     if (stage) {
                       e.cancelBubble = true;
                       // Don't prevent stage dragging on mobile for notes
-                      if (!('ontouchstart' in window)) {
+                      if (!("ontouchstart" in window)) {
                         stage.draggable(false);
                       }
                     }
@@ -728,6 +791,8 @@ export default function BoardPage() {
                       onDragEnd={(e) => handleNoteDragEnd(e, note)}
                       activeNoteId={activeNoteId}
                       setActiveNoteId={setActiveNoteId}
+                      onRequestDelete={requestDeleteNote}
+                      onOptimisticUpdate={handleOptimisticUpdate}
                     />
                   ))}
                 </Layer>
@@ -745,7 +810,7 @@ export default function BoardPage() {
                 <span className="font-medium">Mouse wheel:</span> Zoom in/out
               </div>
               <div>
-                <span className="font-medium">Space + drag:</span> Pan board
+                <span className="font-medium">Click + drag:</span> Pan board
               </div>
               <div>
                 <span className="font-medium">Double click note:</span> Edit
@@ -757,6 +822,36 @@ export default function BoardPage() {
             </div>
           </div>
 
+          {/* Mobile floating zoom controls - left-bottom pill sized to match Add Note on mobile */}
+          <div className="fixed bottom-6 left-6 z-50 lg:hidden">
+            <div className="bg-white/95 border border-gray-200 rounded-xl shadow-[0_6px_20px_rgba(0,0,0,0.08)] px-2 py-2 flex items-center space-x-3">
+              <button
+                onClick={handleZoomOut}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white hover:bg-gray-50 text-gray-700"
+                aria-label="Zoom out"
+              >
+                <ZoomOut size={18} />
+              </button>
+              <div className="text-sm text-gray-700 px-1">
+                {Math.round(scale * 100)}%
+              </div>
+              <button
+                onClick={handleZoomIn}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white hover:bg-gray-50 text-gray-700"
+                aria-label="Zoom in"
+              >
+                <ZoomIn size={18} />
+              </button>
+              <button
+                onClick={handleResetZoom}
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-white hover:bg-gray-50 text-gray-700"
+                aria-label="Reset zoom"
+              >
+                <RotateCcw size={18} />
+              </button>
+            </div>
+          </div>
+
           {notes.length === 0 && (
             <div className="absolute inset-0 pt-16 lg:pt-0 flex items-center justify-center pointer-events-none">
               <div className="text-center bg-white/80 backdrop-blur-sm rounded-xl p-6 lg:p-8 shadow-lg border border-gray-200 mx-4">
@@ -765,10 +860,13 @@ export default function BoardPage() {
                   Start Creating
                 </h3>
                 <p className="text-gray-600 mb-2 text-sm lg:text-base">
-                  <span className="hidden lg:inline">Use the + button on the left to create your first note</span>
-                  <span className="lg:hidden">Tap the + button to add your first note</span>
+                  <span className="hidden lg:inline">
+                    Use the + button on the left to create your first note
+                  </span>
+                  <span className="lg:hidden">
+                    Tap the + button to add your first note
+                  </span>
                 </p>
-                
               </div>
             </div>
           )}

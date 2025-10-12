@@ -36,6 +36,12 @@ export default function RegisterPage() {
                 Sign in here
               </Link>
             </p>
+            <button
+              onClick={() => navigate('/login', { state: { demo: true } })}
+              className="text-gray-600 text-sm mt-1 block hover:text-gray-800 underline "
+            >
+              use a demo account
+            </button>
           </div>
 
           <RegisterForm

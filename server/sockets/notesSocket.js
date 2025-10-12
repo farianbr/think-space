@@ -17,6 +17,7 @@ export function registerNotesSocket(io, socket) {
         boardId,
         note,
         actorId: socket.user?.id,
+        socketId: socket.id,
       });
       ack?.({ ok: true, note });
     } catch (err) {
@@ -38,6 +39,7 @@ export function registerNotesSocket(io, socket) {
         boardId,
         note: updated,
         actorId: socket.user?.id,
+        socketId: socket.id, // can be used client-side to ignore self-updates
       });
       ack?.({ ok: true, note: updated });
     } catch (err) {

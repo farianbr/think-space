@@ -23,3 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Keep deployment files
+!render.yaml
+!vercel.json
+!DEPLOYMENT.md

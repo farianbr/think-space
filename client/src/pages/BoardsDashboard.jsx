@@ -291,7 +291,7 @@ export default function BoardsDashboard() {
               boards={sortedBoards}
               onOpenBoard={handleOpenBoard}
               onDeleteBoard={handleDeleteBoard}
-              deletingId={deleteBoard.isLoading ? deleteBoard.variables : null}
+              deletingId={deleteBoard.isPending ? deleteBoard.variables : null}
               userId={user?.id}
             />
           </div>
@@ -312,7 +312,7 @@ export default function BoardsDashboard() {
         onClose={handleCloseDeleteModal}
         onConfirm={handleConfirmDelete}
         boardTitle={boardToDelete?.title || ''}
-        isDeleting={deleteBoard.isLoading}
+        isDeleting={deleteBoard.isPending}
       />
     </div>
   );

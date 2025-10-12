@@ -5,11 +5,9 @@ import LoginForm from "../features/auth/LoginForm";
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isDemo, setIsDemo] = useState(false);
+  const [isDemo, setIsDemo] = useState(Boolean(location.state?.demo));
 
   const from = location.state?.from?.pathname || "/boards";
-
-  console.log(isDemo);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center px-4">

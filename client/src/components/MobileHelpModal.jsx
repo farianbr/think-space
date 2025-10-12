@@ -33,7 +33,7 @@ export default function MobileHelpModal({ isOpen, onClose }) {
                   <span className="font-medium">Single tap note:</span> Show controls
                 </div>
                 <div>
-                  <span className="font-medium">Triple tap note:</span> Edit text
+                  <span className="font-medium">Double tap note:</span> Edit text
                 </div>
                 <div>
                   <span className="font-medium">Drag note:</span> Move around
@@ -74,13 +74,7 @@ export default function MobileHelpModal({ isOpen, onClose }) {
               </div>
             </div>
 
-            <div className="bg-yellow-50 rounded-lg p-3">
-              <h3 className="font-semibold text-yellow-900 mb-2">Tips</h3>
-              <div className="space-y-1 text-sm text-yellow-800">
-                <div>• Only one note shows controls at a time</div>
-                <div>• Use zoom controls in menu for precise scaling</div>
-              </div>
-            </div>
+            
           </div>
         </div>
 

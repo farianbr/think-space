@@ -104,7 +104,6 @@ export async function addBoardMember(req, res) {
     });
 
     if (existingMember) {
-      console.log("Already a member");
       return res
         .status(200)
         .json({ member: existingMember, message: "Already a member" });
@@ -174,7 +173,7 @@ export async function inviteBoardMemberByEmail(req, res) {
       // Future: create pending invite record and send email.
       return res.status(404).json({
         message:
-          "No user with that email. Consider inviting them to sign up first.",
+          "Email is not registered !",
       });
     }
 
