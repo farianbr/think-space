@@ -2,9 +2,28 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { useAuth } from "../../contexts/authContext";
 
-export default function LoginForm({ onSuccess }) {
-  const [email, setEmail] = useState("demo@thinkspace.dev");
-  const [password, setPassword] = useState("demo1234");
+export default function LoginForm({ onSuccess, isDemo }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  if (isDemo) {
+    // Pre-fill demo credentials when isDemo is true
+    if (email !== "demo@thinkspace.dev") {
+      setEmail("demo@thinkspace.dev");
+    }
+    if (password !== "demo1234") {
+      setPassword("demo1234");
+    }
+  }
+  else {
+    // Clear fields when isDemo is false
+    if (email !== "") {
+      setEmail("");
+    }
+    if (password !== "") {
+      setPassword("");
+    }
+  }
 
   const { login } = useAuth();
 

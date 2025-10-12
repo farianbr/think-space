@@ -768,14 +768,7 @@ export default function BoardPage() {
                   <span className="hidden lg:inline">Use the + button on the left to create your first note</span>
                   <span className="lg:hidden">Tap the + button to add your first note</span>
                 </p>
-                <p className="text-xs text-gray-500 lg:hidden mt-2">
-                  <button 
-                    onClick={() => setShowMobileHelpModal(true)}
-                    className="text-blue-600 underline"
-                  >
-                    Tap here for mobile controls help
-                  </button>
-                </p>
+                
               </div>
             </div>
           )}

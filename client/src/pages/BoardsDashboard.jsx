@@ -160,7 +160,7 @@ export default function BoardsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent mb-2">
-                  Welcome back, {user?.name || user?.email?.split("@")[0] || "there"}! 👋
+                  Welcome back, {user?.name || user?.email?.split("@")[0] || "there"}!  
                 </h1>
                 <p className="text-lg text-slate-600">
                   Manage your boards and collaborate with your team

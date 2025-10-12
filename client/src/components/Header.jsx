@@ -34,7 +34,7 @@ export default function Header() {
               to="/boards"
               className="text-gray-600 hover:text-gray-900 font-medium transition-colors"
             >
-              Archive
+              Archive (coming soon)
             </Link>
           </nav>
         )}

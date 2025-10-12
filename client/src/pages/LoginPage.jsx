@@ -1,11 +1,15 @@
-import React from "react";
+import { useState } from "react";
 import { useLocation, useNavigate, Link } from "react-router-dom";
 import LoginForm from "../features/auth/LoginForm";
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [isDemo, setIsDemo] = useState(false);
+
   const from = location.state?.from?.pathname || "/boards";
+
+  console.log(isDemo);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center px-4">
@@ -36,12 +40,19 @@ export default function LoginPage() {
                 Create one here
               </Link>
             </p>
+            <button
+              onClick={() => setIsDemo(!isDemo)}
+              className="text-gray-600 text-sm mt-1 block hover:text-gray-800 underline "
+            >
+              use a demo account
+            </button>
           </div>
 
           <LoginForm
             onSuccess={() => {
               navigate(from, { replace: true });
             }}
+            isDemo={isDemo}
           />
 
           {/* Additional Options */}

@@ -33,7 +33,7 @@ export default function MobileHelpModal({ isOpen, onClose }) {
                   <span className="font-medium">Single tap note:</span> Show controls
                 </div>
                 <div>
-                  <span className="font-medium">Double tap note:</span> Edit text
+                  <span className="font-medium">Triple tap note:</span> Edit text
                 </div>
                 <div>
                   <span className="font-medium">Drag note:</span> Move around
@@ -47,9 +47,7 @@ export default function MobileHelpModal({ isOpen, onClose }) {
                 <div>
                   <span className="font-medium">Single finger drag:</span> Pan board
                 </div>
-                <div>
-                  <span className="font-medium">Two finger pinch:</span> Zoom in/out
-                </div>
+                
                 <div>
                   <span className="font-medium">Tap empty area:</span> Hide controls
                 </div>
@@ -81,7 +79,6 @@ export default function MobileHelpModal({ isOpen, onClose }) {
               <div className="space-y-1 text-sm text-yellow-800">
                 <div>• Only one note shows controls at a time</div>
                 <div>• Use zoom controls in menu for precise scaling</div>
-                <div>• Long notes will show guide lines</div>
               </div>
             </div>
           </div>
