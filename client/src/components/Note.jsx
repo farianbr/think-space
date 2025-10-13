@@ -16,7 +16,16 @@ const PALETTE = [
 
 import { throttle } from "../lib/throttle";
 
-export default function Note({ note, boardId, onDragStart, onDragEnd, activeNoteId, setActiveNoteId, onOptimisticUpdate, onRequestDelete }) {
+export default function Note({
+  note,
+  boardId,
+  onDragStart,
+  onDragEnd,
+  activeNoteId,
+  setActiveNoteId,
+  onOptimisticUpdate,
+  onRequestDelete,
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(note.text);
   const [showPalette, setShowPalette] = useState(false);
@@ -43,7 +52,6 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
     height: note.height || 120,
   });
 
-
   // keep local text synced with server pushes
   useEffect(() => {
     setValue(note.text);
@@ -52,14 +60,14 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   // Detect mobile and handle control visibility
   useEffect(() => {
     const checkMobile = () => {
-      const mobile = window.innerWidth < 1024 || 'ontouchstart' in window;
+      const mobile = window.innerWidth < 1024 || "ontouchstart" in window;
       setIsMobile(mobile);
     };
-    
+
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
   // Position cursor at end when editing starts
@@ -114,7 +122,7 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
       e.evt.stopPropagation();
       e.evt.preventDefault();
     }
-    
+
     // Don't handle tap events during dragging
     if (isDragging || isDraggingRef.current) {
       return;
@@ -122,7 +130,7 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
 
     const now = Date.now();
     const timeDiff = now - lastTapTime;
-    
+
     if (isMobile) {
       // Check for double tap: must be within 300ms AND lastTapTime must not be 0
       if (timeDiff < 300 && lastTapTime > 0) {
@@ -166,12 +174,12 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
       }
       socket.emit("note:update", boardId, note.id, { text: next });
     }
-    
+
     // Clear mobile controls after editing
     if (isMobile && setActiveNoteId) {
       setActiveNoteId(null);
     }
-    
+
     // On mobile, blur any active element and prevent viewport zoom
     if (isMobile) {
       // Blur the textarea to ensure keyboard closes
@@ -189,8 +197,7 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
   }
 
   function handleDelete() {
-          onRequestDelete(note.id);
-
+    onRequestDelete(note.id || note.tempId);
   }
 
   function togglePalette() {
@@ -385,12 +392,12 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
         height={height}
         fill={noteColor}
         stroke={
-          isDragging 
-            ? "#3b82f6" 
+          isDragging
+            ? "#3b82f6"
             : shouldShowMobileControls
             ? "#10b981" // Green border for mobile controls active
-            : isHovered 
-            ? "#6b7280" 
+            : isHovered
+            ? "#6b7280"
             : "#d1d5db"
         }
         strokeWidth={isDragging || shouldShowMobileControls ? 2 : 1}
@@ -399,9 +406,13 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
         shadowBlur={isDragging ? 8 : 4}
         shadowOffset={{ x: 2, y: 2 }}
         shadowOpacity={0.3}
-        onDblClick={isMobile ? null : () => {
-          startEdit();
-        }}
+        onDblClick={
+          isMobile
+            ? null
+            : () => {
+                startEdit();
+              }
+        }
         onTouchEnd={undefined}
         onClick={isMobile ? null : undefined}
       />
@@ -595,10 +606,13 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
               e.stopPropagation();
               // Ensure cursor goes to end when focused - for both mobile and desktop
               const textarea = e.target;
-              setTimeout(() => {
-                const length = textarea.value.length;
-                textarea.setSelectionRange(length, length);
-              }, isMobile ? 10 : 5); // Slightly longer delay for mobile
+              setTimeout(
+                () => {
+                  const length = textarea.value.length;
+                  textarea.setSelectionRange(length, length);
+                },
+                isMobile ? 10 : 5
+              ); // Slightly longer delay for mobile
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -661,98 +675,99 @@ export default function Note({ note, boardId, onDragStart, onDragEnd, activeNote
       )}
 
       {/* Resize handle - bottom right corner */}
-      {(isHovered || isDragging || isResizing || shouldShowMobileControls) && !isEditing && (
-        <Group
-          x={width - 16} // Increased touch target area
-          y={height - 16}
-          ref={resizeHandleRef}
-          draggable={true}
-          onMouseDown={(e) => {
-            // stop Konva from letting parent handle this event
-            e.cancelBubble = true;
-            e.evt.preventDefault();
-            e.evt.stopPropagation();
-            // small immediate press feedback
-            const g = e.currentTarget;
-            g.to({ scaleX: 0.9, scaleY: 0.9, duration: 0.06 });
-            handleResizeStart(e);
-          }}
-          onTouchStart={(e) => {
-            // Touch support for resize handle
-            e.cancelBubble = true;
-            e.evt.preventDefault();
-            e.evt.stopPropagation();
-            const g = e.currentTarget;
-            g.to({ scaleX: 0.9, scaleY: 0.9, duration: 0.06 });
-            handleResizeStart(e);
-          }}
-          onDragStart={handleResizeStart}
-          onDragMove={handleResize}
-          onDragEnd={(e) => {
-            const g = e.currentTarget;
-            g.to({ scaleX: 1, scaleY: 1, duration: 0.08 });
-            handleResizeEnd(e);
-          }}
-          onMouseEnter={(e) => {
-            const g = e.currentTarget;
-            const stage = g.getStage();
-            if (stage) stage.container().style.cursor = "se-resize";
-            g.to({ scaleX: 1.12, scaleY: 1.12, duration: 0.12 });
-            // lighten circle on hover
-            g.findOne(".bg").fill("rgba(59,130,246,0.95)");
-          }}
-          onMouseLeave={(e) => {
-            const g = e.currentTarget;
-            const stage = g.getStage();
-            if (stage && !isResizing)
-              stage.container().style.cursor = "default";
-            g.to({ scaleX: 1, scaleY: 1, duration: 0.12 });
-            g.findOne(".bg").fill("rgba(59,130,246,0.8)");
-          }}
-        >
-          {/* Background circle - larger for touch */}
-          <Circle
-            name="bg"
-            x={0}
-            y={0}
-            radius={12} // Increased from 8 to 12 for better touch target
-            fill="rgba(59,130,246,0.8)" // Tailwind blue-500 @ 80% opacity
-            stroke="white"
-            strokeWidth={1}
-            shadowColor="rgba(2,6,23,0.2)"
-            shadowBlur={4}
-            shadowOffset={{ x: 0, y: 1 }}
-          />
+      {(isHovered || isDragging || isResizing || shouldShowMobileControls) &&
+        !isEditing && (
+          <Group
+            x={width - 16} // Increased touch target area
+            y={height - 16}
+            ref={resizeHandleRef}
+            draggable={true}
+            onMouseDown={(e) => {
+              // stop Konva from letting parent handle this event
+              e.cancelBubble = true;
+              e.evt.preventDefault();
+              e.evt.stopPropagation();
+              // small immediate press feedback
+              const g = e.currentTarget;
+              g.to({ scaleX: 0.9, scaleY: 0.9, duration: 0.06 });
+              handleResizeStart(e);
+            }}
+            onTouchStart={(e) => {
+              // Touch support for resize handle
+              e.cancelBubble = true;
+              e.evt.preventDefault();
+              e.evt.stopPropagation();
+              const g = e.currentTarget;
+              g.to({ scaleX: 0.9, scaleY: 0.9, duration: 0.06 });
+              handleResizeStart(e);
+            }}
+            onDragStart={handleResizeStart}
+            onDragMove={handleResize}
+            onDragEnd={(e) => {
+              const g = e.currentTarget;
+              g.to({ scaleX: 1, scaleY: 1, duration: 0.08 });
+              handleResizeEnd(e);
+            }}
+            onMouseEnter={(e) => {
+              const g = e.currentTarget;
+              const stage = g.getStage();
+              if (stage) stage.container().style.cursor = "se-resize";
+              g.to({ scaleX: 1.12, scaleY: 1.12, duration: 0.12 });
+              // lighten circle on hover
+              g.findOne(".bg").fill("rgba(59,130,246,0.95)");
+            }}
+            onMouseLeave={(e) => {
+              const g = e.currentTarget;
+              const stage = g.getStage();
+              if (stage && !isResizing)
+                stage.container().style.cursor = "default";
+              g.to({ scaleX: 1, scaleY: 1, duration: 0.12 });
+              g.findOne(".bg").fill("rgba(59,130,246,0.8)");
+            }}
+          >
+            {/* Background circle - larger for touch */}
+            <Circle
+              name="bg"
+              x={0}
+              y={0}
+              radius={12} // Increased from 8 to 12 for better touch target
+              fill="rgba(59,130,246,0.8)" // Tailwind blue-500 @ 80% opacity
+              stroke="white"
+              strokeWidth={1}
+              shadowColor="rgba(2,6,23,0.2)"
+              shadowBlur={4}
+              shadowOffset={{ x: 0, y: 1 }}
+            />
 
-          {/* Grip: three diagonal short lines to indicate resize */}
-          <Group rotation={45} x={-1} y={0}>
-            <Rect
-              x={-3}
-              y={-6}
-              width={8}
-              height={1.5}
-              fill="rgba(255,255,255,0.92)"
-              cornerRadius={1}
-            />
-            <Rect
-              x={-3}
-              y={-1.5}
-              width={8}
-              height={1.5}
-              fill="rgba(255,255,255,0.82)"
-              cornerRadius={1}
-            />
-            <Rect
-              x={-3}
-              y={3}
-              width={8}
-              height={1.5}
-              fill="rgba(255,255,255,0.72)"
-              cornerRadius={1}
-            />
+            {/* Grip: three diagonal short lines to indicate resize */}
+            <Group rotation={45} x={-1} y={0}>
+              <Rect
+                x={-3}
+                y={-6}
+                width={8}
+                height={1.5}
+                fill="rgba(255,255,255,0.92)"
+                cornerRadius={1}
+              />
+              <Rect
+                x={-3}
+                y={-1.5}
+                width={8}
+                height={1.5}
+                fill="rgba(255,255,255,0.82)"
+                cornerRadius={1}
+              />
+              <Rect
+                x={-3}
+                y={3}
+                width={8}
+                height={1.5}
+                fill="rgba(255,255,255,0.72)"
+                cornerRadius={1}
+              />
+            </Group>
           </Group>
-        </Group>
-      )}
+        )}
     </Group>
   );
 }

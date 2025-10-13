@@ -16,6 +16,7 @@ import {
   Menu,
   MoreHorizontal,
   HelpCircle,
+  TrafficCone,
 } from "lucide-react";
 
 import { connectSocket, socket } from "../lib/socket";
@@ -342,25 +343,40 @@ export default function BoardPage() {
       height: 120,
     };
 
-    // Emit create request to server
-    socket.emit("note:create", boardId, newNote, (ack) => {
-      if (ack && ack.ok && ack.note) {
-        // Directly update local state when server confirms
-        setNotes((prev) => [...prev, ack.note]);
-      } else {
-        toast.error(ack?.message || "Failed to create note");
-      }
-    });
+    const tempNote = { ...newNote, tempId: `temp-${Date.now()}` }; // temporary ID for optimistic UI
+    try {
+      setNotes((prev) => [...prev, tempNote]);
+      socket.emit("note:create", boardId, newNote, (ack) => {
+        if (ack && ack.ok && ack.note) {
+          // Replace the optimistic note with the one from server (with ID)
+          setNotes((prev) =>
+            prev.map((n) =>
+              n.tempId === tempNote.tempId
+                ? {
+                    ...n,
+                    ...Object.fromEntries(
+                      Object.entries(ack.note).filter(([k]) => !(k in n))
+                    ),
+                  }
+                : n
+            )
+          );
+        }
+      });
+      toast.success("Note created");
+    } catch (err) {
+      toast.error(err?.message || "Failed to create note");
+    }
   }, 200);
 
   // Request note deletion (with server confirmation)
   const requestDeleteNote = (noteId) => {
     if (!boardId || !joined) return;
 
+    setNotes((prev) => prev.filter((n) => (n.id || n.tempId) !== noteId));
     socket.emit("note:delete", boardId, noteId, (ack) => {
       if (ack && ack.ok) {
-        // Only update UI after server confirms deletion
-        setNotes((prev) => prev.filter((n) => n.id !== noteId));
+        toast.success("Note deleted");
       } else {
         toast.error(ack?.message || "Failed to delete note");
       }
@@ -633,8 +649,8 @@ export default function BoardPage() {
           </div>
 
           {/* Floating Add Note button - responsive: mobile bottom-right (lower), desktop left-center */}
-          <div className="absolute z-10 right-6 bottom-16 lg:left-4 lg:top-1/2 lg:transform lg:-translate-y-1/2 lg:right-auto">
-            <div className="flex lg:flex-col items-center lg:items-center space-x-3 lg:space-x-0 lg:space-y-3 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
+          <div className="absolute z-10 right-6 bottom-6 lg:bottom-auto lg:left-4 lg:top-1/2 lg:transform lg:-translate-y-1/2 lg:right-auto">
+            <div className="flex lg:flex-col items-center lg:items-center space-x-0 lg:space-y-3 bg-white border border-gray-200 rounded-lg shadow-lg p-3">
               <button
                 onClick={() => {
                   if (!joined) return;
@@ -785,7 +801,7 @@ export default function BoardPage() {
                 <Layer>
                   {notes.map((note) => (
                     <Note
-                      key={note.id}
+                      key={note.id || note.tempId}
                       note={note}
                       boardId={boardId}
                       onDragEnd={(e) => handleNoteDragEnd(e, note)}
