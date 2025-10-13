@@ -18,6 +18,8 @@ export async function createNote(boardId, payload) {
   const x = Number.isFinite(payload?.x) ? Math.round(payload.x) : 100;
   const y = Number.isFinite(payload?.y) ? Math.round(payload.y) : 100;
   const color = typeof payload?.color === "string" ? payload.color : "#fde047";
+  const width = Number.isFinite(payload?.width) ? Math.max(100, Math.round(payload.width)) : 180;
+  const height = Number.isFinite(payload?.height) ? Math.max(60, Math.round(payload.height)) : 120;
 
   // Make sure board exists; if not, we could auto-create in dev
   await prisma.board.upsert({
@@ -27,7 +29,7 @@ export async function createNote(boardId, payload) {
   });
 
   const note = await prisma.note.create({
-    data: { boardId, text, x, y, color },
+    data: { boardId, text, x, y, color, width, height },
   });
   return note;
 }

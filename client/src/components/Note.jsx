@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Rect, Text, Group, Circle, Path } from "react-konva";
 import { Html } from "react-konva-utils";
-import { socket } from "../lib/socket";
 
 const PALETTE = [
   { color: "#fef3c7", name: "Warm Yellow" },
@@ -18,7 +17,6 @@ import { throttle } from "../lib/throttle";
 
 export default function Note({
   note,
-  boardId,
   onDragStart,
   onDragEnd,
   activeNoteId,
@@ -46,11 +44,6 @@ export default function Note({
   const isDraggingRef = useRef(false);
   const isResizingRef = useRef(false);
   const initialResizeData = useRef(null);
-
-  const lastEmittedSizeRef = useRef({
-    width: note.width || 180,
-    height: note.height || 120,
-  });
 
   // keep local text synced with server pushes
   useEffect(() => {
@@ -98,7 +91,6 @@ export default function Note({
     if (note.width && note.height) {
       const newSize = { width: note.width, height: note.height };
       setNoteSize(newSize);
-      lastEmittedSizeRef.current = newSize;
     }
   }, [note.width, note.height]);
 
@@ -166,13 +158,9 @@ export default function Note({
   function finishEdit() {
     setIsEditing(false);
     const next = value.trim();
-    if (next !== note.text) {
-      // Optimistically update text locally for snappier UI (similar to drag/resize)
-      // The socket filtering in BoardPage will prevent redundant updates from server
-      if (onOptimisticUpdate) {
-        onOptimisticUpdate(note.id, { text: next });
-      }
-      socket.emit("note:update", boardId, note.id, { text: next });
+    
+    if (next !== note.text && onOptimisticUpdate) {
+      onOptimisticUpdate(note.id, { text: next });
     }
 
     // Clear mobile controls after editing
@@ -182,13 +170,10 @@ export default function Note({
 
     // On mobile, blur any active element and prevent viewport zoom
     if (isMobile) {
-      // Blur the textarea to ensure keyboard closes
       if (textareaRef.current) {
         textareaRef.current.blur();
       }
-      // Small delay to ensure blur happens before any other actions
       setTimeout(() => {
-        // Force a brief viewport reset if needed
         if (window.visualViewport) {
           window.scrollTo(0, 0);
         }
@@ -197,7 +182,7 @@ export default function Note({
   }
 
   function handleDelete() {
-    onRequestDelete(note.id || note.tempId);
+    onRequestDelete(note.id);
   }
 
   function togglePalette() {
@@ -205,18 +190,14 @@ export default function Note({
   }
 
   function applyColor(colorObj) {
-    // Optimistically update color locally for snappier UI (similar to drag/resize)
-    // The socket filtering in BoardPage will prevent redundant updates from server
     if (onOptimisticUpdate) {
       onOptimisticUpdate(note.id, { color: colorObj.color });
     }
-    socket.emit("note:update", boardId, note.id, { color: colorObj.color });
     setShowPalette(false);
-    // Clear mobile controls after color change with delay
+    
+    // Clear mobile controls after color change
     if (isMobile && setActiveNoteId) {
-      setTimeout(() => {
-        setActiveNoteId(null);
-      }, 100);
+      setTimeout(() => setActiveNoteId(null), 100);
     }
   }
 
@@ -283,11 +264,9 @@ export default function Note({
 
   const emitResizeThrottled = useRef(
     throttle((w, h) => {
-      // Avoid spamming server and only emit when values change meaningfully
-      const last = lastEmittedSizeRef.current;
-      if (last.width === w && last.height === h) return;
-      lastEmittedSizeRef.current = { width: w, height: h };
-      socket.emit("note:update", boardId, note.id, { width: w, height: h });
+      if (onOptimisticUpdate) {
+        onOptimisticUpdate(note.id, { width: w, height: h });
+      }
     }, 80)
   ).current;
 
@@ -350,7 +329,9 @@ export default function Note({
 
     // Send final size update
     const { width, height } = noteSize;
-    socket.emit("note:update", boardId, note.id, { width, height });
+    if (onOptimisticUpdate) {
+      onOptimisticUpdate(note.id, { width, height });
+    }
 
     // Restore cursor
     const stage = group?.getStage();

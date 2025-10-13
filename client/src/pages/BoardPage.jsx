@@ -305,24 +305,27 @@ export default function BoardPage() {
 
   useEffect(() => {
     if (!boardId) return;
+    
+    // Consistent echo prevention: ignore all events from this socket
     function onNoteCreated(p) {
-      if (!p || p.boardId !== boardId) return;
-      // Ignore server echoes for notes created by this socket - we already
-      // inserted an optimistic note locally. Server includes socketId in payload.
-      if (p.socketId && p.socketId === socket.id) return;
+      if (!p || p.boardId !== boardId || p.socketId === socket.id) return;
       setNotes((prev) => [...prev, p.note]);
     }
+    
     function onNoteUpdated(p) {
       if (!p || p.boardId !== boardId || p.socketId === socket.id) return;
       setNotes((prev) => prev.map((n) => (n.id === p.note.id ? p.note : n)));
     }
+    
     function onNoteDeleted(p) {
-      if (!p || p.boardId !== boardId) return;
+      if (!p || p.boardId !== boardId || p.socketId === socket.id) return;
       setNotes((prev) => prev.filter((n) => n.id !== p.noteId));
     }
+    
     socket.on("note:created", onNoteCreated);
     socket.on("note:updated", onNoteUpdated);
     socket.on("note:deleted", onNoteDeleted);
+    
     return () => {
       socket.off("note:created", onNoteCreated);
       socket.off("note:updated", onNoteUpdated);
@@ -334,77 +337,86 @@ export default function BoardPage() {
   const createNote = throttle((x, y) => {
     if (!boardId || !joined) return;
 
-    const newNote = {
+    const optimisticNote = {
+      id: `optimistic-${Date.now()}`, // Temporary ID for tracking
       text: "",
       x: Math.max(20, Math.min(x - 70, canvasSize.width - 160)),
       y: Math.max(20, Math.min(y - 45, canvasSize.height - 110)),
       color: "#fef3c7",
       width: 180,
       height: 120,
+      isOptimistic: true, // Flag to identify optimistic notes
     };
 
-    const tempNote = { ...newNote, tempId: `temp-${Date.now()}` }; // temporary ID for optimistic UI
-    try {
-      setNotes((prev) => [...prev, tempNote]);
-      socket.emit("note:create", boardId, newNote, (ack) => {
-        if (ack && ack.ok && ack.note) {
-          // Replace the optimistic note with the one from server (with ID)
-          setNotes((prev) =>
-            prev.map((n) =>
-              n.tempId === tempNote.tempId
-                ? {
-                    ...n,
-                    ...Object.fromEntries(
-                      Object.entries(ack.note).filter(([k]) => !(k in n))
-                    ),
-                  }
-                : n
-            )
-          );
-        }
-      });
-      toast.success("Note created");
-    } catch (err) {
-      toast.error(err?.message || "Failed to create note");
-    }
+    // 1. Instant UI update
+    setNotes((prev) => [...prev, optimisticNote]);
+    toast.success("Note created");
+
+    // 2. Send to server
+    socket.emit("note:create", boardId, optimisticNote, (ack) => {
+      if (ack && ack.ok && ack.note) {
+        // Replace optimistic note with server note
+        setNotes((prev) =>
+          prev.map((n) =>
+            n.id === optimisticNote.id ? ack.note : n
+          )
+        );
+      } else {
+        // Remove failed note and show error
+        setNotes((prev) => prev.filter((n) => n.id !== optimisticNote.id));
+        toast.error(ack?.message || "Failed to create note");
+      }
+    });
   }, 200);
 
-  // Request note deletion (with server confirmation)
+  // Delete note with instant UI update
   const requestDeleteNote = (noteId) => {
     if (!boardId || !joined) return;
 
-    setNotes((prev) => prev.filter((n) => (n.id || n.tempId) !== noteId));
+    const noteToDelete = notes.find((n) => n.id === noteId);
+    if (!noteToDelete) return;
+
+    // 1. Instant UI update - remove immediately
+    setNotes((prev) => prev.filter((n) => n.id !== noteId));
+    toast.success("Note deleted");
+
+    // 2. If it's an optimistic note, don't send to server
+    if (noteToDelete.isOptimistic) return;
+
+    // 3. Send to server for real notes
     socket.emit("note:delete", boardId, noteId, (ack) => {
-      if (ack && ack.ok) {
-        toast.success("Note deleted");
-      } else {
+      if (!ack || !ack.ok) {
+        // Restore note on failure
+        setNotes((prev) => [...prev, noteToDelete]);
         toast.error(ack?.message || "Failed to delete note");
       }
     });
   };
 
-  // Optimistic update for text and color changes (similar to drag updates)
-  const handleOptimisticUpdate = (noteId, updates) => {
+  // Unified optimistic update for all note changes
+  const updateNote = (noteId, updates) => {
+    const note = notes.find((n) => n.id === noteId);
+    if (!note) return;
+
+    // 1. Instant UI update
     setNotes((prev) =>
       prev.map((n) => (n.id === noteId ? { ...n, ...updates } : n))
     );
+
+    // 2. Send to server only for real notes
+    if (!note.isOptimistic) {
+      socket.emit("note:update", boardId, noteId, updates);
+    }
   };
 
   const handleNoteDragEnd = (e, note) => {
-    // Get the actual position where the user dropped the note
     const newX = Math.round(e.target.x());
     const newY = Math.round(e.target.y());
 
-    // Only emit update if position actually changed
+    // Only update if position changed
     if (newX !== note.x || newY !== note.y) {
-      socket.emit("note:update", boardId, note.id, { x: newX, y: newY });
-      // Optimistically update position locally for snappier UI
-      setNotes((prev) =>
-        prev.map((n) => (n.id === note.id ? { ...n, x: newX, y: newY } : n))
-      );
+      updateNote(note.id, { x: newX, y: newY });
     }
-
-    // Note: Note component now handles clearing activeNoteId on mobile
   };
 
   if (boardLoading) {
@@ -801,14 +813,13 @@ export default function BoardPage() {
                 <Layer>
                   {notes.map((note) => (
                     <Note
-                      key={note.id || note.tempId}
+                      key={note.id}
                       note={note}
-                      boardId={boardId}
                       onDragEnd={(e) => handleNoteDragEnd(e, note)}
                       activeNoteId={activeNoteId}
                       setActiveNoteId={setActiveNoteId}
                       onRequestDelete={requestDeleteNote}
-                      onOptimisticUpdate={handleOptimisticUpdate}
+                      onOptimisticUpdate={updateNote}
                     />
                   ))}
                 </Layer>
