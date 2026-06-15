@@ -47,9 +47,19 @@ export function describeNotification(n) {
         body: `You were added to “${data.boardTitle || "a board"}”${data.role ? ` as ${data.role}` : ""}.`,
       };
     case "member_added":
-      return { icon: UserPlus, title: "New collaborator", body: "A collaborator joined a board you’re on." };
+      return {
+        icon: UserPlus,
+        title: "New collaborator",
+        body: `${data.memberName || "Someone"} joined “${data.boardTitle || "a board"}”.`,
+      };
     case "mention":
-      return { icon: Bell, title: "You were mentioned", body: data.preview || "Someone mentioned you." };
+      return {
+        icon: Bell,
+        title: "You were mentioned",
+        body: data.preview
+          ? `“${data.preview}”`
+          : `You were mentioned in “${data.boardTitle || "a board"}”.`,
+      };
     default:
       return { icon: Bell, title: "Update", body: data.message || "You have a new update." };
   }

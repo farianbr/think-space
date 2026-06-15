@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
   User,
@@ -11,10 +12,19 @@ import {
   UserPlus,
   AtSign,
   KeyRound,
+  Layers,
+  ArrowRight,
+  Check,
+  Sparkles,
+  ExternalLink,
 } from "lucide-react";
 
 import { useAuth } from "../contexts/authContext";
 import { useUpdateProfile, useChangePassword } from "../hooks/profile";
+import { usePeople } from "../hooks/people";
+import { useBillingStatus, useCheckout, useBillingPortal } from "../hooks/billing";
+import { roleMeta } from "../lib/roles";
+import { timeAgo } from "../lib/format";
 import TwoFactorSettings from "../components/settings/TwoFactorSettings";
 import {
   Avatar,
@@ -33,8 +43,8 @@ const SECTIONS = [
   { id: "appearance", label: "Appearance", icon: Palette },
   { id: "notifications", label: "Notifications", icon: Bell },
   { id: "security", label: "Security", icon: Shield },
-  { id: "team", label: "Team", icon: Users, soon: true },
-  { id: "billing", label: "Billing", icon: CreditCard, soon: true },
+  { id: "team", label: "Team", icon: Users },
+  { id: "billing", label: "Billing", icon: CreditCard },
 ];
 
 function ProfileSection() {
@@ -266,6 +276,249 @@ function SecuritySection() {
   );
 }
 
+function TeamSection() {
+  const { data: people, isLoading } = usePeople();
+  const list = people || [];
+  const boardCount = new Set(list.flatMap((p) => p.sharedBoards.map((b) => b.id))).size;
+
+  return (
+    <Card className="p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold text-ink">Team</h2>
+          <p className="mt-1 text-sm text-muted">People you collaborate with across your boards.</p>
+        </div>
+        <Link
+          to="/team"
+          className="inline-flex shrink-0 items-center gap-1 text-sm font-medium text-muted hover:text-ink"
+        >
+          View all <ArrowRight className="size-3.5" />
+        </Link>
+      </div>
+
+      {isLoading ? (
+        <p className="mt-6 text-sm text-muted">Loading…</p>
+      ) : list.length === 0 ? (
+        <div className="mt-8 flex flex-col items-center justify-center py-8 text-center">
+          <span className="mb-3 flex size-12 items-center justify-center rounded-2xl border border-hairline bg-sunken text-faint">
+            <Users className="size-5" strokeWidth={1.75} />
+          </span>
+          <p className="max-w-sm text-sm text-muted">
+            No collaborators yet. Invite people to a board and they'll appear here.
+          </p>
+        </div>
+      ) : (
+        <>
+          <div className="mt-5 flex gap-6 border-b border-hairline pb-4 text-sm">
+            <span className="text-muted">
+              <span className="text-lg font-semibold text-ink">{list.length}</span>{" "}
+              {list.length === 1 ? "teammate" : "teammates"}
+            </span>
+            <span className="text-muted">
+              <span className="text-lg font-semibold text-ink">{boardCount}</span> shared{" "}
+              {boardCount === 1 ? "board" : "boards"}
+            </span>
+          </div>
+          <div className="mt-2 divide-y divide-hairline">
+            {list.slice(0, 8).map((p) => {
+              const meta = roleMeta(p.topRole);
+              return (
+                <div key={p.id} className="flex items-center gap-3 py-3">
+                  <Avatar user={p} src={p.avatarUrl} size="md" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-ink">{p.name || p.email}</p>
+                    <p className="truncate text-xs text-muted">{p.email}</p>
+                  </div>
+                  <div className="hidden items-center gap-1 text-xs text-faint sm:flex">
+                    <Layers className="size-3.5" strokeWidth={2} aria-hidden />
+                    {p.sharedCount}
+                  </div>
+                  <Badge variant={p.topRole === "owner" ? "accent" : "neutral"}>{meta.label}</Badge>
+                </div>
+              );
+            })}
+          </div>
+          {list.length > 8 && (
+            <p className="mt-3 text-center text-xs text-faint">
+              and {list.length - 8} more — see the full{" "}
+              <Link to="/team" className="font-medium text-muted hover:text-ink">
+                Team page
+              </Link>
+            </p>
+          )}
+        </>
+      )}
+    </Card>
+  );
+}
+
+const BILLING_PLANS = [
+  {
+    id: "free",
+    name: "Free",
+    price: "$0",
+    period: "forever",
+    features: ["Up to 3 boards", "Real-time collaboration", "Comments & reactions"],
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: "$8",
+    period: "/ month",
+    features: ["Unlimited boards", "Voice rooms", "Priority sync", "Board templates"],
+  },
+  {
+    id: "team",
+    name: "Team",
+    price: "$16",
+    period: "/ user / month",
+    features: ["Everything in Pro", "Admin roles & RBAC", "Workspace activity", "Centralized billing"],
+  },
+];
+
+function BillingSection() {
+  const { data: billing, isLoading, refetch } = useBillingStatus();
+  const checkout = useCheckout();
+  const portal = useBillingPortal();
+  const currentPlan = billing?.plan || "free";
+
+  // Reflect the redirect back from Stripe Checkout.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const status = params.get("billing");
+    if (!status) return;
+    if (status === "success") {
+      toast.success("Subscription updated");
+      refetch();
+    } else if (status === "cancelled") {
+      toast("Checkout cancelled");
+    }
+    params.delete("billing");
+    const qs = params.toString();
+    window.history.replaceState({}, "", window.location.pathname + (qs ? `?${qs}` : ""));
+  }, [refetch]);
+
+  const upgrade = async (plan) => {
+    try {
+      const { url } = await checkout.mutateAsync(plan);
+      if (url) window.location.href = url;
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Could not start checkout");
+    }
+  };
+
+  const manage = async () => {
+    try {
+      const { url } = await portal.mutateAsync();
+      if (url) window.location.href = url;
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Could not open billing portal");
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <Card className="p-6">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-base font-semibold text-ink">Billing & plan</h2>
+            <p className="mt-1 text-sm text-muted">
+              {isLoading ? (
+                "Loading…"
+              ) : (
+                <>
+                  You're on the{" "}
+                  <span className="font-medium capitalize text-ink">{currentPlan}</span> plan
+                  {billing?.subscriptionStatus && billing.subscriptionStatus !== "active" && (
+                    <span className="text-danger"> · {billing.subscriptionStatus}</span>
+                  )}
+                  {billing?.currentPeriodEnd && currentPlan !== "free" && (
+                    <span className="text-faint">
+                      {" "}
+                      · renews {new Date(billing.currentPeriodEnd).toLocaleDateString()}
+                    </span>
+                  )}
+                  .
+                </>
+              )}
+            </p>
+          </div>
+          {billing?.hasCustomer && (
+            <Button variant="secondary" size="sm" icon={ExternalLink} onClick={manage} loading={portal.isPending}>
+              Manage subscription
+            </Button>
+          )}
+        </div>
+
+        {billing && !billing.configured && (
+          <p className="mt-4 rounded-lg border border-hairline bg-sunken px-3 py-2 text-xs text-muted">
+            Billing isn't configured on this server yet. Add your Stripe keys to enable upgrades.
+          </p>
+        )}
+      </Card>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        {BILLING_PLANS.map((plan) => {
+          const isCurrent = plan.id === currentPlan;
+          const isPaid = plan.id !== "free";
+          return (
+            <Card
+              key={plan.id}
+              className={cn(
+                "flex flex-col p-5",
+                isCurrent && "ring-2 ring-accent"
+              )}
+            >
+              <div className="flex items-center gap-2">
+                {plan.id === "pro" && <Sparkles className="size-4 text-accent" />}
+                <h3 className="text-sm font-semibold text-ink">{plan.name}</h3>
+                {isCurrent && <Badge variant="accent">Current</Badge>}
+              </div>
+              <p className="mt-2">
+                <span className="text-2xl font-semibold text-ink">{plan.price}</span>{" "}
+                <span className="text-xs text-muted">{plan.period}</span>
+              </p>
+              <ul className="mt-4 flex-1 space-y-2">
+                {plan.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-muted">
+                    <Check className="mt-0.5 size-4 shrink-0 text-positive" strokeWidth={2.5} />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-5">
+                {isCurrent ? (
+                  <Button variant="secondary" disabled className="w-full">
+                    Current plan
+                  </Button>
+                ) : isPaid ? (
+                  <Button
+                    className="w-full"
+                    onClick={() => upgrade(plan.id)}
+                    loading={checkout.isPending}
+                    disabled={billing && !billing.configured}
+                  >
+                    {currentPlan === "free" ? "Upgrade" : "Switch"} to {plan.name}
+                  </Button>
+                ) : (
+                  <Button
+                    variant="secondary"
+                    className="w-full"
+                    onClick={manage}
+                    disabled={!billing?.hasCustomer}
+                  >
+                    Downgrade
+                  </Button>
+                )}
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 function ComingSoon({ section }) {
   return (
     <Card className="p-6">
@@ -322,6 +575,8 @@ export default function SettingsPage() {
           {active === "appearance" && <AppearanceSection />}
           {active === "notifications" && <NotificationsSection />}
           {active === "security" && <SecuritySection />}
+          {active === "team" && <TeamSection />}
+          {active === "billing" && <BillingSection />}
           {section?.soon && <ComingSoon section={section} />}
         </div>
       </div>

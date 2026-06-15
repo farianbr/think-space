@@ -9,16 +9,16 @@ datasource db {
 }
 
 model Board {
-  id          String   @id @default(cuid())
-  title       String
-  description String?
-  icon        String? // optional lucide icon name
-  color       String? // optional accent color (hex)
-  isArchived  Boolean  @default(false)
-  ownerId     String?
-  owner       User?    @relation(fields: [ownerId], references: [id], onDelete: Cascade, name: "BoardOwner")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String    @id @default(cuid())
+  title          String
+  description    String?
+  icon           String? // optional lucide icon name
+  color          String? // optional accent color (hex)
+  isArchived     Boolean   @default(false)
+  ownerId        String?
+  owner          User?     @relation(fields: [ownerId], references: [id], onDelete: Cascade, name: "BoardOwner")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
   // Tracks last meaningful change (note edited, member added, …) for sorting
   // and "recent activity" surfaces, independent of schema-level updatedAt.
   lastActivityAt DateTime?
@@ -27,6 +27,7 @@ model Board {
   members    BoardMember[]
   stars      BoardStar[]
   activities Activity[]
+  comments   Comment[]
 
   @@index([ownerId])
   @@index([isArchived])
@@ -46,32 +47,75 @@ model Note {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  comments  Comment[]
+  reactions Reaction[]
+
   @@index([boardId])
 }
 
-model User {
+// Threaded discussion attached to a single note.
+model Comment {
   id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  password  String // bcrypt hash
-  avatarUrl String?
+  boardId   String
+  noteId    String
+  authorId  String?
+  text      String
+  createdAt DateTime @default(now())
+
+  board  Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  note   Note  @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([noteId, createdAt])
+  @@index([boardId])
+}
+
+// Emoji reaction on a note. One row per (note, user, emoji).
+model Reaction {
+  id        String   @id @default(cuid())
+  noteId    String
+  userId    String
+  emoji     String
+  createdAt DateTime @default(now())
+
+  note Note @relation(fields: [noteId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([noteId, userId, emoji])
+  @@index([noteId])
+}
+
+model User {
+  id                     String    @id @default(cuid())
+  email                  String    @unique
+  name                   String?
+  password               String // bcrypt hash
+  avatarUrl              String?
   // Free-form JSON for UI preferences (theme is also persisted client-side).
-  preferences Json?
+  preferences            Json?
   // TOTP two-factor auth. Secret is stored once setup begins; `enabled` flips
   // true only after the user verifies a code from their authenticator app.
-  twoFactorEnabled Boolean @default(false)
-  twoFactorSecret  String?
+  twoFactorEnabled       Boolean   @default(false)
+  twoFactorSecret        String?
   // Bcrypt-hashed single-use recovery codes, consumed one-by-one at sign-in
   // when the authenticator device is unavailable.
-  twoFactorRecoveryCodes String[] @default([])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  twoFactorRecoveryCodes String[]  @default([])
+  // Stripe billing. plan is the entitlement tier ("free" | "pro" | "team");
+  // subscriptionStatus mirrors Stripe's subscription.status.
+  stripeCustomerId       String?   @unique
+  plan                   String    @default("free")
+  subscriptionStatus     String?
+  currentPeriodEnd       DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   boards        Board[]        @relation("BoardOwner")
   members       BoardMember[]
   stars         BoardStar[]
   notifications Notification[] @relation("NotificationRecipient")
   activities    Activity[]
+  comments      Comment[]
+  reactions     Reaction[]
 }
 
 model BoardMember {

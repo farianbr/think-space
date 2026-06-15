@@ -1,26 +1,40 @@
-import { useState } from "react";
-import { Activity as ActivityIcon, Users, Mic, X, Circle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Activity as ActivityIcon, Users, Mic, MessageSquare, X, Circle } from "lucide-react";
 import { IconButton } from "../ui";
 import ActivityFeed from "../activity/ActivityFeed";
 import ActiveUsers from "../ActiveUsers";
 import MembersList from "../MembersList";
 import VoiceRoomPanel from "./VoiceRoomPanel";
+import CommentThread from "../comments/CommentThread";
 import { useBoardActivity } from "../../hooks/activity";
 import { cn } from "../../lib/cn";
 
 const TABS = [
   { id: "activity", label: "Activity", icon: ActivityIcon },
+  { id: "comments", label: "Comments", icon: MessageSquare },
   { id: "members", label: "Members", icon: Users },
   { id: "voice", label: "Voice", icon: Mic },
 ];
 
 /**
- * Right-hand board panel: Activity / Members / Voice. Rendered as a slide-over
- * on top of the canvas; the parent controls open/close.
+ * Right-hand board panel: Activity / Comments / Members / Voice. Rendered as a
+ * slide-over on top of the canvas; the parent controls open/close.
  */
-export default function BoardPanel({ boardId, board, online, initialTab = "activity", onClose }) {
+export default function BoardPanel({
+  boardId,
+  board,
+  online,
+  initialTab = "activity",
+  commentNote,
+  canComment,
+  canManage,
+  onClose,
+}) {
   const [tab, setTab] = useState(initialTab);
   const { data: activities, isLoading } = useBoardActivity(boardId);
+
+  // Follow the parent when it opens a specific tab (e.g. a note's comments).
+  useEffect(() => setTab(initialTab), [initialTab]);
 
   return (
     <div className="flex h-full w-full flex-col bg-surface sm:w-96">
@@ -54,6 +68,15 @@ export default function BoardPanel({ boardId, board, online, initialTab = "activ
           </div>
         )}
 
+        {tab === "comments" && (
+          <CommentThread
+            boardId={boardId}
+            note={commentNote}
+            canComment={canComment}
+            canManage={canManage}
+          />
+        )}
+
         {tab === "members" && (
           <div className="space-y-6 p-4">
             <div>
@@ -71,7 +94,7 @@ export default function BoardPanel({ boardId, board, online, initialTab = "activ
           </div>
         )}
 
-        {tab === "voice" && <VoiceRoomPanel online={online} />}
+        {tab === "voice" && <VoiceRoomPanel boardId={boardId} />}
       </div>
     </div>
   );

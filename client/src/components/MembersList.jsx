@@ -5,7 +5,7 @@ import { Crown, UserMinus, Users } from "lucide-react";
 import { useBoardMembers, useRemoveBoardMember } from "../hooks/members";
 import { useAuth } from "../contexts/authContext";
 import { Avatar, Badge, IconButton, EmptyState, Skeleton, ConfirmDialog } from "./ui";
-import { roleMeta } from "../lib/roles";
+import { roleMeta, canManageMembersRole } from "../lib/roles";
 import { displayName } from "../lib/format";
 
 export default function MembersList({ boardId, boardOwnerId }) {
@@ -13,6 +13,8 @@ export default function MembersList({ boardId, boardOwnerId }) {
   const removeMutation = useRemoveBoardMember(boardId);
   const { user } = useAuth();
   const isOwner = user?.id === boardOwnerId;
+  const selfRole = isOwner ? "owner" : members?.find((m) => m.userId === user?.id)?.role || null;
+  const canManage = isOwner || canManageMembersRole(selfRole);
   const [confirming, setConfirming] = useState(null);
 
   if (isLoading) {
@@ -64,7 +66,7 @@ export default function MembersList({ boardId, boardOwnerId }) {
               <span className="text-xs font-medium text-faint">
                 {isOwnerRow ? "Owner" : roleMeta(m.role).label}
               </span>
-              {isOwner && !isOwnerRow && (
+              {canManage && !isOwnerRow && (isOwner || m.role !== "admin") && (
                 <IconButton
                   icon={UserMinus}
                   label="Remove member"
@@ -87,7 +89,7 @@ export default function MembersList({ boardId, boardOwnerId }) {
               toast.success("Member removed");
               setConfirming(null);
             },
-            onError: () => toast.error("Couldn't remove member"),
+            onError: (err) => toast.error(err?.response?.data?.message || "Couldn't remove member"),
           })
         }
         title="Remove member?"

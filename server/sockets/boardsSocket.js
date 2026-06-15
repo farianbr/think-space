@@ -1,9 +1,14 @@
 import { prisma } from "../prismaClient.js";
 import { getNotesSnapshot } from "../controllers/notesController.js";
 import { addOnline, getOnline, removeOnline } from "../lib/online.js";
-import { userCanAccessBoard } from "../lib/boardAccess.js";
+import { getUserBoardRole, userCanAccessBoard } from "../lib/boardAccess.js";
 
 export function registerBoardsSocket(io, socket) {
+  // Per-socket cache of the user's role on each joined board, so hot-path note
+  // handlers can authorize without a DB round-trip per event. Refreshed on join
+  // and kept in sync by setSocketBoardRole when roles change (see members ctrl).
+  if (!socket.data.boardRoles) socket.data.boardRoles = {};
+
   socket.on("board:join", async (boardId, ack) => {
     try {
       if (!boardId || typeof boardId !== "string")
@@ -13,21 +18,11 @@ export function registerBoardsSocket(io, socket) {
       if (!userId)
         return ack?.({ ok: false, status: 401, message: "Unauthorized" });
 
-      const board = await prisma.board.findUnique({
-        where: { id: boardId },
-        select: { id: true, ownerId: true },
-      });
-      if (!board)
-        return ack?.({ ok: false, status: 404, message: "Board not found" });
+      const role = await getUserBoardRole(boardId, userId);
+      if (!role)
+        return ack?.({ ok: false, status: 403, message: "Forbidden" });
 
-      if (board.ownerId !== userId) {
-        const member = await prisma.boardMember.findFirst({
-          where: { boardId, userId },
-        });
-        if (!member)
-          return ack?.({ ok: false, status: 403, message: "Forbidden" });
-      }
-
+      socket.data.boardRoles[boardId] = role;
       socket.join(boardRoom(boardId));
 
       // mark online
@@ -55,7 +50,7 @@ export function registerBoardsSocket(io, socket) {
       }
 
       const snapshot = await getNotesSnapshot(boardId);
-      ack?.({ ok: true, boardId, notes: snapshot });
+      ack?.({ ok: true, boardId, notes: snapshot, role });
     } catch (err) {
       console.error("board:join error", err);
       ack?.({ ok: false, message: err.message });
@@ -65,6 +60,7 @@ export function registerBoardsSocket(io, socket) {
   socket.on("board:leave", async (boardId) => {
     if (boardId && typeof boardId === "string") {
       socket.leave(boardRoom(boardId));
+      if (socket.data.boardRoles) delete socket.data.boardRoles[boardId];
       const userId = socket.user?.id;
       if (userId) {
         removeOnline(boardId, userId);

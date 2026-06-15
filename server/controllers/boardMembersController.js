@@ -8,6 +8,60 @@ import {
 import { getIo } from "../lib/io.js";
 import { notify } from "../lib/notify.js";
 import { logActivity } from "../lib/activity.js";
+import { getUserBoardRole } from "../lib/boardAccess.js";
+import { canManageMembers, normalizeRole } from "../lib/permissions.js";
+import { syncUserBoardRole } from "../lib/socketRoles.js";
+
+/**
+ * Authorize a member-management action. Returns { board } on success or
+ * { error: { status, message } } to send back. Owners and admins may manage
+ * members; admins are barred from touching the owner or other admins, and from
+ * granting the admin role, so they can never escalate past the owner.
+ */
+async function authorizeManage({ boardId, actorId, targetUserId, targetRole, nextRole }) {
+  const board = await prisma.board.findUnique({
+    where: { id: boardId },
+    select: { id: true, ownerId: true, title: true },
+  });
+  if (!board) return { error: { status: 404, message: "Board not found" } };
+
+  const actorRole = await getUserBoardRole(boardId, actorId);
+  if (!canManageMembers(actorRole))
+    return { error: { status: 403, message: "You can't manage members on this board" } };
+
+  // Only the owner may grant, revoke, or modify the admin role.
+  const isOwner = actorRole === "owner";
+  if (!isOwner) {
+    if (targetUserId && targetUserId === board.ownerId)
+      return { error: { status: 403, message: "Only the owner can manage the owner" } };
+    if (normalizeRole(targetRole) === "admin" || normalizeRole(nextRole) === "admin")
+      return { error: { status: 403, message: "Only the owner can manage admins" } };
+  }
+
+  return { board, actorRole };
+}
+
+/** Notify existing board members (besides the actor and newcomer) of a new collaborator. */
+async function notifyMemberAdded({ boardId, board, actorId, newMember }) {
+  const members = await prisma.boardMember.findMany({
+    where: { boardId },
+    select: { userId: true },
+  });
+  const recipients = new Set([board.ownerId, ...members.map((m) => m.userId)]);
+  recipients.delete(actorId);
+  recipients.delete(newMember.userId);
+
+  const memberName = newMember.user?.name || newMember.user?.email || "Someone";
+  for (const userId of recipients) {
+    await notify({
+      userId,
+      type: "member_added",
+      boardId,
+      actorId,
+      data: { boardTitle: board.title, memberName },
+    });
+  }
+}
 /**
  * GET /api/boards/:boardId/members
  * - allowed: board owner OR any board member
@@ -70,7 +124,7 @@ export async function getBoardMembers(req, res) {
 /**
  * POST /api/boards/:boardId/members
  * - body: { userId, role? }
- * - allowed: only board owner
+ * - allowed: board owner or admin (admins can't grant the admin role)
  */
 export async function addBoardMember(req, res) {
   try {
@@ -85,17 +139,9 @@ export async function addBoardMember(req, res) {
     const actorId = req.user?.id;
     if (!actorId) return res.status(401).json({ message: "Unauthorized" });
 
-    const board = await prisma.board.findUnique({
-      where: { id: boardId },
-      select: { id: true, ownerId: true },
-    });
-    if (!board) return res.status(404).json({ message: "Board not found" });
-
-    if (board.ownerId !== actorId) {
-      return res
-        .status(403)
-        .json({ message: "Only board owner can add members" });
-    }
+    const auth = await authorizeManage({ boardId, actorId, nextRole: role });
+    if (auth.error) return res.status(auth.error.status).json({ message: auth.error.message });
+    const { board } = auth;
 
     // ensure user exists
     const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -134,6 +180,9 @@ export async function addBoardMember(req, res) {
       });
     }
 
+    syncUserBoardRole(member.userId, boardId, member.role);
+    await notifyMemberAdded({ boardId, board, actorId, newMember: member });
+
     return res
       .status(201)
       .json({ member: member, message: "Member added successfully" });
@@ -146,7 +195,7 @@ export async function addBoardMember(req, res) {
 /**
  * POST /api/boards/:boardId/members/invite
  * Body: { email, role? }
- * Only board owner can call this.
+ * Allowed: board owner or admin (admins can't grant the admin role).
  * - If user exists: create BoardMember (or return existing)
  * - If user not found: return 404 (we will implement pending invites later)
  */
@@ -160,16 +209,9 @@ export async function inviteBoardMemberByEmail(req, res) {
     const actorId = req.user?.id;
     if (!actorId) return res.status(401).json({ message: "Unauthorized" });
 
-    // owner check
-    const board = await prisma.board.findUnique({
-      where: { id: boardId },
-      select: { id: true, ownerId: true, title: true },
-    });
-    if (!board) return res.status(404).json({ message: "Board not found" });
-    if (board.ownerId !== actorId)
-      return res
-        .status(403)
-        .json({ message: "Only owner can invite by email" });
+    const auth = await authorizeManage({ boardId, actorId, nextRole: role });
+    if (auth.error) return res.status(auth.error.status).json({ message: auth.error.message });
+    const { board } = auth;
 
     // find user by email
     const user = await prisma.user.findUnique({ where: { email } });
@@ -224,6 +266,9 @@ export async function inviteBoardMemberByEmail(req, res) {
         meta: { userId: user.id, email: user.email, role: member.role },
       });
 
+      syncUserBoardRole(member.userId, boardId, member.role);
+      await notifyMemberAdded({ boardId, board, actorId, newMember: member });
+
       return res.status(201).json({ member, message: "Added successfully" });
     } catch (e) {
       if (e?.code === "P2002") {
@@ -245,7 +290,7 @@ export async function inviteBoardMemberByEmail(req, res) {
 
 /**
  * DELETE /api/boards/:boardId/members/:userId
- * - allowed: only board owner
+ * - allowed: board owner or admin (admins can't remove the owner or admins)
  */
 export async function removeBoardMember(req, res) {
   try {
@@ -254,17 +299,9 @@ export async function removeBoardMember(req, res) {
     const actorId = req.user?.id;
     if (!actorId) return res.status(401).json({ message: "Unauthorized" });
 
-    const board = await prisma.board.findUnique({
-      where: { id: boardId },
-      select: { id: true, ownerId: true },
-    });
-    if (!board) return res.status(404).json({ message: "Board not found" });
-
-    if (board.ownerId !== actorId) {
-      return res
-        .status(403)
-        .json({ message: "Only board owner can remove members" });
-    }
+    const targetRole = await getUserBoardRole(boardId, targetUserId);
+    const auth = await authorizeManage({ boardId, actorId, targetUserId, targetRole });
+    if (auth.error) return res.status(auth.error.status).json({ message: auth.error.message });
 
     const deleted = await prisma.boardMember.deleteMany({
       where: { boardId, userId: targetUserId },
@@ -283,6 +320,8 @@ export async function removeBoardMember(req, res) {
           actorId,
         });
       }
+      // Revoke the removed user's cached role and kick them from the live board.
+      syncUserBoardRole(targetUserId, boardId, null);
       return res.status(204).send();
     }
   } catch (err) {
@@ -293,7 +332,7 @@ export async function removeBoardMember(req, res) {
 
 /**
  * PATCH /api/boards/:boardId/members/:userId  body: { role }
- * - allowed: only board owner
+ * - allowed: board owner or admin (admins can't touch the owner or admins)
  * - cannot change the owner's role (ownership is implicit)
  */
 export async function updateMemberRole(req, res) {
@@ -306,17 +345,20 @@ export async function updateMemberRole(req, res) {
     const actorId = req.user?.id;
     if (!actorId) return res.status(401).json({ message: "Unauthorized" });
 
-    const board = await prisma.board.findUnique({
-      where: { id: boardId },
-      select: { id: true, ownerId: true },
+    const existing = await prisma.boardMember.findFirst({ where: { boardId, userId: targetUserId } });
+
+    const auth = await authorizeManage({
+      boardId,
+      actorId,
+      targetUserId,
+      targetRole: existing?.role,
+      nextRole: parsed.data.role,
     });
-    if (!board) return res.status(404).json({ message: "Board not found" });
-    if (board.ownerId !== actorId)
-      return res.status(403).json({ message: "Only board owner can change roles" });
+    if (auth.error) return res.status(auth.error.status).json({ message: auth.error.message });
+    const { board } = auth;
+
     if (targetUserId === board.ownerId)
       return res.status(400).json({ message: "Cannot change the owner's role" });
-
-    const existing = await prisma.boardMember.findFirst({ where: { boardId, userId: targetUserId } });
     if (!existing) return res.status(404).json({ message: "Member not found" });
 
     const member = await prisma.boardMember.update({
@@ -333,6 +375,8 @@ export async function updateMemberRole(req, res) {
         actorId,
       });
     }
+
+    syncUserBoardRole(targetUserId, boardId, member.role);
 
     logActivity({
       boardId,

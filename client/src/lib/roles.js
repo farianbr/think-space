@@ -20,3 +20,14 @@ export function roleMeta(value) {
 }
 
 export const ASSIGNABLE_ROLES = ROLES.filter((r) => r.assignable);
+
+// Capability checks — mirror server/lib/permissions.js. Keep the two in sync.
+const RANK = { owner: 5, admin: 4, editor: 3, member: 3, commenter: 2, viewer: 1 };
+const rank = (role) => RANK[role] || 0;
+
+/** Editor and above may create/edit/delete notes. */
+export const canEditRole = (role) => rank(role) >= RANK.editor;
+/** Commenter and above may comment and react. */
+export const canCommentRole = (role) => rank(role) >= RANK.commenter;
+/** Admin and owner may manage members and board settings. */
+export const canManageMembersRole = (role) => rank(role) >= RANK.admin;

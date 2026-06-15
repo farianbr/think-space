@@ -2,21 +2,32 @@ import { useState, useEffect, useRef } from "react";
 import { Rect, Text, Group, Circle, Path } from "react-konva";
 import { Html } from "react-konva-utils";
 
+// Mirrors the board toolbar's NOTE_COLORS so the in-note picker and the
+// new-note swatches always offer the same warm set.
 const PALETTE = [
-  { color: "#fef3c7", name: "Warm Yellow" },
-  { color: "#fecaca", name: "Soft Red" },
-  { color: "#bbf7d0", name: "Fresh Green" },
-  { color: "#bfdbfe", name: "Sky Blue" },
-  { color: "#f3e8ff", name: "Lavender" },
+  { color: "#fde68a", name: "Amber" },
   { color: "#fed7aa", name: "Peach" },
-  { color: "#e0e7ff", name: "Periwinkle" },
-  { color: "#fce7f3", name: "Pink" },
+  { color: "#bae6fd", name: "Sky" },
+  { color: "#bbf7d0", name: "Mint" },
+  { color: "#fbcfe8", name: "Pink" },
+  { color: "#ddd6fe", name: "Lavender" },
 ];
+
+// Warm-neutral chrome colors, aligned to the app's design tokens (ink / line).
+const INK = "#1c1917";
+const BORDER_HOVER = "#a8a29e";
+const BORDER_IDLE = "#e7e5e4";
 
 import { throttle } from "../lib/throttle";
 
+import { filterMentionCandidates } from "../lib/mentions";
+
 export default function Note({
   note,
+  canEdit = true,
+  canComment = false,
+  mentionPeople = [],
+  onOpenComments,
   onDragStart,
   onDragEnd,
   activeNoteId,
@@ -26,6 +37,8 @@ export default function Note({
 }) {
   const [isEditing, setIsEditing] = useState(false);
   const [value, setValue] = useState(note.text);
+  // @mention autocomplete state while editing: { query, start, index } | null.
+  const [mention, setMention] = useState(null);
   const [showPalette, setShowPalette] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -103,6 +116,7 @@ export default function Note({
   }, []);
 
   function startEdit() {
+    if (!canEdit) return; // viewers/commenters can't edit note text
     setShowPalette(false);
     setIsEditing(true);
   }
@@ -152,11 +166,34 @@ export default function Note({
     }
   }
 
-  // Determine if this note should show mobile controls
-  const shouldShowMobileControls = isMobile && activeNoteId === note.id;
+  // A note is "active" (selected) when its id matches activeNoteId — set by a
+  // tap on mobile or a click on desktop. Active notes keep their controls and
+  // a solid selection ring; they're also the target for keyboard delete/dup.
+  const isActive = activeNoteId === note.id;
+  // Edit affordances (delete, color, resize) only render when the viewer can
+  // actually edit; selection/hover ring still works for read-only roles.
+  const showControls = canEdit && (isHovered || isDragging || showPalette || isActive);
+
+  // Compact reaction / comment summary shown at the foot of the note.
+  const reactionSummary = (() => {
+    const counts = {};
+    for (const r of note.reactions || []) counts[r.emoji] = (counts[r.emoji] || 0) + 1;
+    const parts = Object.entries(counts)
+      .slice(0, 4)
+      .map(([e, c]) => `${e} ${c}`);
+    if (note.commentCount) parts.push(`💬 ${note.commentCount}`);
+    return parts.join("   ");
+  })();
+  const commentBtnVisible = canComment && !isEditing && (isHovered || isActive);
+
+  function handleSelect() {
+    if (isDraggingRef.current) return;
+    if (activeNoteId !== note.id) setActiveNoteId?.(note.id);
+  }
 
   function finishEdit() {
     setIsEditing(false);
+    setMention(null);
     const next = value.trim();
     
     if (next !== note.text && onOptimisticUpdate) {
@@ -183,6 +220,48 @@ export default function Note({
 
   function handleDelete() {
     onRequestDelete(note.id);
+  }
+
+  // ---- @mention autocomplete -------------------------------------------------
+  const mentionMatches =
+    mention && mentionPeople.length
+      ? filterMentionCandidates(mentionPeople, mention.query)
+      : [];
+
+  // Detect a partial "@handle" token immediately before the caret.
+  function refreshMention(el) {
+    if (!el) return setMention(null);
+    const caret = el.selectionStart ?? el.value.length;
+    const m = /(^|\s)@([\w.-]*)$/.exec(el.value.slice(0, caret));
+    if (m) {
+      const start = caret - m[2].length - 1; // position of the "@"
+      setMention({ query: m[2], start, index: 0 });
+    } else {
+      setMention(null);
+    }
+  }
+
+  function handleEditorChange(e) {
+    setValue(e.target.value);
+    refreshMention(e.target);
+  }
+
+  function insertMention(cand) {
+    const el = textareaRef.current;
+    const caret = el ? el.selectionStart : value.length;
+    const before = value.slice(0, mention.start);
+    const after = value.slice(caret);
+    const inserted = `@${cand.handle} `;
+    const next = before + inserted + after;
+    setValue(next);
+    setMention(null);
+    requestAnimationFrame(() => {
+      if (el) {
+        const pos = (before + inserted).length;
+        el.focus();
+        el.setSelectionRange(pos, pos);
+      }
+    });
   }
 
   function togglePalette() {
@@ -341,7 +420,7 @@ export default function Note({
   }
 
   // Get current note color or default
-  const noteColor = note.color || "#fef3c7";
+  const noteColor = note.color || "#fde68a";
   const { width, height } = noteSize;
 
   return (
@@ -349,11 +428,12 @@ export default function Note({
       ref={groupRef}
       x={note.x}
       y={note.y}
-      draggable={!isEditing && !isResizing}
+      draggable={canEdit && !isEditing && !isResizing}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onMouseEnter={() => !isMobile && setIsHovered(true)}
       onMouseLeave={() => !isMobile && setIsHovered(false)}
+      onClick={isMobile ? undefined : handleSelect}
       onTap={isMobile ? handleTap : undefined}
       onDblClick={isMobile ? null : handleDoubleClick}
     >
@@ -375,15 +455,13 @@ export default function Note({
         height={height}
         fill={noteColor}
         stroke={
-          isDragging
-            ? "#3b82f6"
-            : shouldShowMobileControls
-            ? "#10b981" // Green border for mobile controls active
+          isDragging || isActive
+            ? INK // solid ink ring while dragging or selected
             : isHovered
-            ? "#6b7280"
-            : "#d1d5db"
+            ? BORDER_HOVER
+            : BORDER_IDLE
         }
-        strokeWidth={isDragging || shouldShowMobileControls ? 2 : 1}
+        strokeWidth={isDragging || isActive ? 2 : 1}
         cornerRadius={8}
         shadowColor="rgba(0,0,0,0.1)"
         shadowBlur={isDragging ? 8 : 4}
@@ -451,7 +529,7 @@ export default function Note({
       )}
 
       {/* Delete X */}
-      {(isHovered || isDragging || showPalette || shouldShowMobileControls) && (
+      {showControls && (
         <Group
           x={width - 18}
           y={13}
@@ -508,7 +586,7 @@ export default function Note({
       )}
 
       {/* Color picker button - top left corner inside note */}
-      {(isHovered || isDragging || showPalette || shouldShowMobileControls) && (
+      {showControls && (
         <Circle
           x={15}
           y={15}
@@ -562,6 +640,57 @@ export default function Note({
         />
       )}
 
+      {/* Reaction / comment summary (display-only) */}
+      {reactionSummary && !commentBtnVisible && (
+        <Text
+          text={reactionSummary}
+          x={12}
+          y={height - 18}
+          fontSize={11}
+          fontFamily="'Inter', 'Segoe UI', sans-serif"
+          fill="#57534e"
+          listening={false}
+        />
+      )}
+
+      {/* Open comments / react button */}
+      {commentBtnVisible && (
+        <Group
+          x={14}
+          y={height - 14}
+          onClick={(e) => {
+            e.cancelBubble = true;
+            onOpenComments?.(note.id);
+          }}
+          onTap={(e) => {
+            e.evt?.stopPropagation();
+            onOpenComments?.(note.id);
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.getStage().container().style.cursor = "pointer";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.getStage().container().style.cursor = "default";
+          }}
+        >
+          <Rect x={-10} y={-10} width={56} height={20} cornerRadius={10} fill="rgba(28,25,23,0.06)" />
+          <Path
+            data="M-4 -4 H4 a2 2 0 0 1 2 2 v3 a2 2 0 0 1 -2 2 H0 l-3 3 v-3 H-4 a2 2 0 0 1 -2 -2 v-3 a2 2 0 0 1 2 -2 z"
+            fill="#44403c"
+            scaleX={0.85}
+            scaleY={0.85}
+          />
+          <Text
+            text={note.commentCount ? String(note.commentCount) : "Comment"}
+            x={10}
+            y={-5}
+            fontSize={11}
+            fontFamily="'Inter', 'Segoe UI', sans-serif"
+            fill="#44403c"
+          />
+        </Group>
+      )}
+
       {/* Text content */}
       {!isEditing && (
         <Text
@@ -572,7 +701,7 @@ export default function Note({
           fontFamily="'Inter', 'Segoe UI', sans-serif"
           width={width - 24}
           height={height - (height > 40 ? 40 : 24)}
-          fill="#374151"
+          fill="#44403c"
           lineHeight={1.4}
           wrap="word"
           verticalAlign="top"
@@ -584,12 +713,17 @@ export default function Note({
       {/* Edit mode input */}
       {isEditing && (
         <Html groupProps={{ x: 12, y: height > 40 ? 30 : 12 }}>
+         <div style={{ position: "relative", width: `${width - 24}px` }}>
           <textarea
             ref={textareaRef}
             autoFocus
             value={value}
-            onChange={(e) => setValue(e.target.value)}
-            onBlur={finishEdit}
+            onChange={handleEditorChange}
+            onBlur={() => {
+              // Let a mention-menu click land before committing/closing.
+              setTimeout(() => finishEdit(), 120);
+            }}
+            onClick={(e) => refreshMention(e.target)}
             onTouchStart={(e) => {
               // Prevent any touch zoom on the textarea
               e.stopPropagation();
@@ -608,6 +742,32 @@ export default function Note({
               ); // Slightly longer delay for mobile
             }}
             onKeyDown={(e) => {
+              // When the mention menu is open, arrows/Enter/Tab drive it.
+              if (mentionMatches.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setMention((m) => ({ ...m, index: (m.index + 1) % mentionMatches.length }));
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setMention((m) => ({
+                    ...m,
+                    index: (m.index - 1 + mentionMatches.length) % mentionMatches.length,
+                  }));
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  insertMention(mentionMatches[mention.index] || mentionMatches[0]);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setMention(null);
+                  return;
+                }
+              }
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
                 finishEdit();
@@ -641,6 +801,35 @@ export default function Note({
             }}
             placeholder="Type your note..."
           />
+
+          {/* @mention autocomplete menu */}
+          {mentionMatches.length > 0 && (
+            <div
+              className="absolute left-0 top-full z-50 mt-1 w-52 overflow-hidden rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+              onMouseDown={(e) => e.preventDefault()} // keep textarea focus
+            >
+              {mentionMatches.map((c, i) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  onClick={() => insertMention(c)}
+                  onMouseEnter={() => setMention((m) => (m ? { ...m, index: i } : m))}
+                  className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm ${
+                    i === mention.index ? "bg-gray-100" : "hover:bg-gray-50"
+                  }`}
+                >
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-gray-200 text-[11px] font-semibold uppercase text-gray-600">
+                    {(c.name || c.handle).slice(0, 1)}
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-medium text-gray-800">{c.name}</span>
+                    <span className="block truncate text-[11px] text-gray-400">@{c.handle}</span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+         </div>
         </Html>
       )}
 
@@ -668,8 +857,7 @@ export default function Note({
       )}
 
       {/* Resize handle - bottom right corner */}
-      {(isHovered || isDragging || isResizing || shouldShowMobileControls) &&
-        !isEditing && (
+      {(showControls || isResizing) && !isEditing && (
           <Group
             x={width - 16} // Increased touch target area
             y={height - 16}
@@ -706,8 +894,8 @@ export default function Note({
               const stage = g.getStage();
               if (stage) stage.container().style.cursor = "se-resize";
               g.to({ scaleX: 1.12, scaleY: 1.12, duration: 0.12 });
-              // lighten circle on hover
-              g.findOne(".bg").fill("rgba(59,130,246,0.95)");
+              // darken circle on hover
+              g.findOne(".bg").fill("rgba(28,25,23,0.95)");
             }}
             onMouseLeave={(e) => {
               const g = e.currentTarget;
@@ -715,7 +903,7 @@ export default function Note({
               if (stage && !isResizing)
                 stage.container().style.cursor = "default";
               g.to({ scaleX: 1, scaleY: 1, duration: 0.12 });
-              g.findOne(".bg").fill("rgba(59,130,246,0.8)");
+              g.findOne(".bg").fill("rgba(28,25,23,0.8)");
             }}
           >
             {/* Background circle - larger for touch */}
@@ -724,7 +912,7 @@ export default function Note({
               x={0}
               y={0}
               radius={12} // Increased from 8 to 12 for better touch target
-              fill="rgba(59,130,246,0.8)" // Tailwind blue-500 @ 80% opacity
+              fill="rgba(28,25,23,0.8)" // ink @ 80% opacity
               stroke="white"
               strokeWidth={1}
               shadowColor="rgba(2,6,23,0.2)"

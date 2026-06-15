@@ -19,8 +19,25 @@ export async function getNotesSnapshot(boardId) {
   const notes = await prisma.note.findMany({
     where: { boardId },
     orderBy: { createdAt: "asc" },
+    include: {
+      reactions: { select: { emoji: true, userId: true } },
+      _count: { select: { comments: true } },
+    },
   });
-  return notes;
+  // Flatten the comment count onto the note for the client.
+  return notes.map(({ _count, ...note }) => ({
+    ...note,
+    commentCount: _count.comments,
+  }));
+}
+
+/** Fetch just a note's current text (for mention diffing before an update). */
+export async function getNoteText(noteId) {
+  const note = await prisma.note.findUnique({
+    where: { id: noteId },
+    select: { text: true },
+  });
+  return note?.text;
 }
 
 export async function createNote(boardId, payload) {

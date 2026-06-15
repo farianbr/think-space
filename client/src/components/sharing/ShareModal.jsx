@@ -9,11 +9,11 @@ import {
   useRemoveBoardMember,
 } from "../../hooks/members";
 import { useAuth } from "../../contexts/authContext";
-import { ROLES, ASSIGNABLE_ROLES, roleMeta } from "../../lib/roles";
+import { ROLES, ASSIGNABLE_ROLES, roleMeta, canManageMembersRole } from "../../lib/roles";
 import { displayName } from "../../lib/format";
 import { cn } from "../../lib/cn";
 
-function RolePicker({ value, onChange, disabled }) {
+function RolePicker({ value, onChange, disabled, options = ASSIGNABLE_ROLES }) {
   const meta = roleMeta(value);
   if (disabled) {
     return <span className="text-xs font-medium text-muted">{meta.label}</span>;
@@ -29,7 +29,7 @@ function RolePicker({ value, onChange, disabled }) {
         </button>
       }
     >
-      {ASSIGNABLE_ROLES.map((r) => (
+      {options.map((r) => (
         <DropdownMenu.Item key={r.value} icon={r.icon} onSelect={() => onChange(r.value)}>
           <span className="flex flex-col">
             <span>{r.label}</span>
@@ -54,6 +54,17 @@ export default function ShareModal({ open, onClose, boardId, board }) {
 
   const ownerId = board?.ownerId;
   const isOwner = user?.id === ownerId;
+
+  // The current user's role on this board drives what they can manage. Admins
+  // can manage members too, but only the owner may grant/modify the admin role.
+  const selfRole = isOwner
+    ? "owner"
+    : members.find((m) => m.userId === user?.id)?.role || null;
+  const canManage = isOwner || canManageMembersRole(selfRole);
+  // Roles an admin (non-owner) is allowed to assign — no granting "admin".
+  const assignable = isOwner ? ASSIGNABLE_ROLES : ASSIGNABLE_ROLES.filter((r) => r.value !== "admin");
+  const canManageRow = (m) =>
+    canManage && m.userId !== ownerId && (isOwner || m.role !== "admin");
 
   const sortedMembers = [...members].sort((a, b) => {
     if (a.userId === ownerId) return -1;
@@ -88,7 +99,7 @@ export default function ShareModal({ open, onClose, boardId, board }) {
     <Modal open={open} onClose={onClose} title="Share board" size="lg" description={board?.title}>
       <div className="flex flex-col gap-6">
         {/* Invite by email */}
-        {isOwner && (
+        {canManage && (
           <form onSubmit={submitInvite} className="flex flex-col gap-2 sm:flex-row">
             <div className="flex-1">
               <Input
@@ -108,7 +119,7 @@ export default function ShareModal({ open, onClose, boardId, board }) {
                   </Button>
                 }
               >
-                {ASSIGNABLE_ROLES.map((r) => (
+                {assignable.map((r) => (
                   <DropdownMenu.Item key={r.value} icon={r.icon} onSelect={() => setRole(r.value)}>
                     {r.label}
                   </DropdownMenu.Item>
@@ -150,15 +161,16 @@ export default function ShareModal({ open, onClose, boardId, board }) {
                     </div>
                     <RolePicker
                       value={isOwnerRow ? "owner" : m.role}
-                      disabled={!isOwner || isOwnerRow}
+                      disabled={!canManageRow(m)}
+                      options={assignable}
                       onChange={(r) =>
                         updateRole.mutate(
                           { userId: m.userId, role: r },
-                          { onError: () => toast.error("Couldn't update role") }
+                          { onError: (err) => toast.error(err?.response?.data?.message || "Couldn't update role") }
                         )
                       }
                     />
-                    {isOwner && !isOwnerRow && (
+                    {canManageRow(m) && (
                       <IconButton
                         icon={UserMinus}
                         label="Remove member"

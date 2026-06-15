@@ -34,6 +34,7 @@ import { connectSocket, socket } from "../lib/socket";
 import { fetchBoard, fetchNotes } from "../lib/api";
 import { throttle } from "../lib/throttle";
 import { useAuth } from "../contexts/authContext";
+import { canEditRole, canCommentRole, canManageMembersRole, roleMeta } from "../lib/roles";
 
 import Note from "../components/Note";
 import MobileHelpModal from "../components/MobileHelpModal";
@@ -43,6 +44,8 @@ import RenameBoardModal from "../components/board/RenameBoardModal";
 import { IconButton, Button, Tooltip, AvatarGroup } from "../components/ui";
 import useOnlineMembers from "../hooks/useOnlineMembers";
 import useMembersSocket from "../hooks/useMembersSocket";
+import { useBoardMembers } from "../hooks/members";
+import { mentionCandidates } from "../lib/mentions";
 import { cn } from "../lib/cn";
 
 // Sticky palette for new notes (warm, muted).
@@ -55,6 +58,9 @@ export default function BoardPage() {
 
   const [notes, setNotes] = useState([]);
   const [joined, setJoined] = useState(false);
+  const [role, setRole] = useState(null);
+  const canEdit = canEditRole(role);
+  const canComment = canCommentRole(role);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showMobileHelpModal, setShowMobileHelpModal] = useState(false);
   const [showRename, setShowRename] = useState(false);
@@ -103,6 +109,10 @@ export default function BoardPage() {
 
   const { online } = useOnlineMembers(boardId);
   useMembersSocket(boardId);
+
+  // Members power the @mention autocomplete while editing a note.
+  const { data: boardMembers } = useBoardMembers(boardId);
+  const mentionPeople = mentionCandidates(boardMembers || [], user?.id);
 
   // Fallback: Fetch notes via REST so first load shows something even if socket connect is delayed
   const { data: notesFallback } = useQuery({
@@ -191,6 +201,7 @@ export default function BoardPage() {
         socket.emit("board:join", boardId, (response) => {
           if (response && response.ok) {
             setNotes(response.notes || []);
+            setRole(response.role || null);
             setJoined(true);
             if (!joinedRef.current) {
               toast.success("Connected to board");
@@ -315,20 +326,59 @@ export default function BoardPage() {
       setNotes((prev) => prev.filter((n) => n.id !== p.noteId));
     }
 
+    function onReactionUpdated(p) {
+      if (!p || p.boardId !== boardId) return;
+      setNotes((prev) => prev.map((n) => (n.id === p.noteId ? { ...n, reactions: p.reactions } : n)));
+    }
+    function onCommentCreated(p) {
+      if (!p || p.boardId !== boardId) return;
+      setNotes((prev) =>
+        prev.map((n) => (n.id === p.noteId ? { ...n, commentCount: (n.commentCount || 0) + 1 } : n))
+      );
+    }
+    function onCommentDeleted(p) {
+      if (!p || p.boardId !== boardId) return;
+      setNotes((prev) =>
+        prev.map((n) =>
+          n.id === p.noteId ? { ...n, commentCount: Math.max(0, (n.commentCount || 0) - 1) } : n
+        )
+      );
+    }
+    function onRoleChanged(p) {
+      if (!p || p.boardId !== boardId) return;
+      setRole(p.role || null);
+      toast(`Your role is now ${roleMeta(p.role).label}`, { icon: "🔑" });
+    }
+    function onAccessRevoked(p) {
+      if (!p || p.boardId !== boardId) return;
+      toast.error("Your access to this board was removed");
+      navigate("/boards");
+    }
+
     socket.on("note:created", onNoteCreated);
     socket.on("note:updated", onNoteUpdated);
     socket.on("note:deleted", onNoteDeleted);
+    socket.on("reaction:updated", onReactionUpdated);
+    socket.on("comment:created", onCommentCreated);
+    socket.on("comment:deleted", onCommentDeleted);
+    socket.on("board:role_changed", onRoleChanged);
+    socket.on("board:access_revoked", onAccessRevoked);
 
     return () => {
       socket.off("note:created", onNoteCreated);
       socket.off("note:updated", onNoteUpdated);
       socket.off("note:deleted", onNoteDeleted);
+      socket.off("reaction:updated", onReactionUpdated);
+      socket.off("comment:created", onCommentCreated);
+      socket.off("comment:deleted", onCommentDeleted);
+      socket.off("board:role_changed", onRoleChanged);
+      socket.off("board:access_revoked", onAccessRevoked);
     };
-  }, [boardId]);
+  }, [boardId, navigate]);
 
   // Create note at specified position (throttled)
   const createNote = throttle((x, y) => {
-    if (!boardId || !joined) return;
+    if (!boardId || !joined || !canEdit) return;
 
     const optimisticNote = {
       id: `optimistic-${Date.now()}`,
@@ -355,7 +405,7 @@ export default function BoardPage() {
   }, 200);
 
   const requestDeleteNote = (noteId) => {
-    if (!boardId || !joined) return;
+    if (!boardId || !joined || !canEdit) return;
     const noteToDelete = notes.find((n) => n.id === noteId);
     if (!noteToDelete) return;
 
@@ -373,12 +423,42 @@ export default function BoardPage() {
   };
 
   const updateNote = (noteId, updates) => {
+    if (!canEdit) return;
     const note = notes.find((n) => n.id === noteId);
     if (!note) return;
     setNotes((prev) => prev.map((n) => (n.id === noteId ? { ...n, ...updates } : n)));
     if (!note.isOptimistic) {
       socket.emit("note:update", boardId, noteId, updates);
     }
+  };
+
+  // Duplicate an existing note: same text/color/size, nudged down-right so the
+  // copy is visible. Mirrors createNote's optimistic + ack reconciliation.
+  const duplicateNote = (source) => {
+    if (!boardId || !joined || !canEdit || !source) return;
+    const optimisticNote = {
+      id: `optimistic-${Date.now()}`,
+      text: source.text || "",
+      x: Math.round(source.x) + 24,
+      y: Math.round(source.y) + 24,
+      color: source.color || draftColor,
+      width: source.width || 180,
+      height: source.height || 120,
+      isOptimistic: true,
+    };
+
+    setNotes((prev) => [...prev, optimisticNote]);
+    toast.success("Note duplicated");
+
+    socket.emit("note:create", boardId, optimisticNote, (ack) => {
+      if (ack && ack.ok && ack.note) {
+        setNotes((prev) => prev.map((n) => (n.id === optimisticNote.id ? ack.note : n)));
+        setActiveNoteId(ack.note.id);
+      } else {
+        setNotes((prev) => prev.filter((n) => n.id !== optimisticNote.id));
+        toast.error(ack?.message || "Failed to duplicate note");
+      }
+    });
   };
 
   const handleNoteDragEnd = (e, note) => {
@@ -389,8 +469,38 @@ export default function BoardPage() {
     }
   };
 
+  // Keyboard actions on the selected note. Guarded against firing while a note's
+  // textarea is focused so editing keeps normal Backspace/typing behavior.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (!activeNoteId) return;
+      const tag = document.activeElement?.tagName;
+      if (tag === "TEXTAREA" || tag === "INPUT") return;
+
+      // Esc deselects regardless of role; mutating shortcuts need edit access.
+      if (e.key === "Escape") {
+        setActiveNoteId(null);
+        return;
+      }
+      if (!canEdit) return;
+
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        requestDeleteNote(activeNoteId);
+        setActiveNoteId(null);
+      } else if ((e.key === "d" || e.key === "D") && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        const note = notes.find((n) => n.id === activeNoteId);
+        if (note) duplicateNote(note);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeNoteId, notes, joined, canEdit]);
+
   const addNoteAtCenter = () => {
-    if (!joined) return;
+    if (!joined || !canEdit) return;
     let centerX, centerY;
     if (stageRef.current && stageRef.current.width() > 0 && stageRef.current.height() > 0) {
       const stage = stageRef.current;
@@ -401,6 +511,12 @@ export default function BoardPage() {
       centerY = canvasSize.height > 0 ? (canvasSize.height / 2 - stagePosition.y) / scale : 200;
     }
     createNote(centerX, centerY);
+  };
+
+  // Select a note and open the side panel to its comment thread.
+  const openComments = (noteId) => {
+    setActiveNoteId(noteId);
+    setPanel("comments");
   };
 
   const handleExport = () => {
@@ -501,7 +617,7 @@ export default function BoardPage() {
             <IconButton icon={Download} label="Export as PNG" onClick={handleExport} />
           </Tooltip>
 
-          <Tooltip label="Voice room (soon)">
+          <Tooltip label="Voice room">
             <IconButton
               icon={Mic}
               label="Voice room"
@@ -534,36 +650,46 @@ export default function BoardPage() {
       {/* Body */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <div ref={containerRef} className="relative min-w-0 flex-1 bg-canvas">
-          {/* Floating contextual toolbar — add note + color swatches */}
-          <div className="absolute left-4 top-1/2 z-10 -translate-y-1/2 lg:block">
-            <div className="flex flex-col items-center gap-3 rounded-2xl border border-hairline bg-surface p-2 shadow-card">
-              <Tooltip label={joined ? "Add note" : "Connecting…"} side="right">
-                <button
-                  onClick={addNoteAtCenter}
-                  disabled={!joined}
-                  className="flex size-11 items-center justify-center rounded-xl bg-ink text-ink-contrast shadow-soft transition-transform hover:scale-[1.04] active:scale-95 disabled:opacity-40"
-                  aria-label="Add note"
-                >
-                  <Plus className="size-5" strokeWidth={2.25} />
-                </button>
-              </Tooltip>
-              <div className="h-px w-7 bg-hairline" />
-              <div className="flex flex-col gap-1.5">
-                {NOTE_COLORS.map((c) => (
+          {/* Floating contextual toolbar — add note + color swatches.
+              Hidden for viewers/commenters who can't create notes. */}
+          {canEdit && (
+            <div className="absolute left-4 top-1/2 z-10 -translate-y-1/2 lg:block">
+              <div className="flex flex-col items-center gap-3 rounded-2xl border border-hairline bg-surface p-2 shadow-card">
+                <Tooltip label={joined ? "Add note" : "Connecting…"} side="right">
                   <button
-                    key={c}
-                    onClick={() => setDraftColor(c)}
-                    aria-label={`Note color ${c}`}
-                    className={cn(
-                      "size-6 rounded-full border transition-transform hover:scale-110",
-                      draftColor === c ? "ring-2 ring-ink ring-offset-2 ring-offset-surface" : "border-black/5"
-                    )}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
+                    onClick={addNoteAtCenter}
+                    disabled={!joined}
+                    className="flex size-11 items-center justify-center rounded-xl bg-ink text-ink-contrast shadow-soft transition-transform hover:scale-[1.04] active:scale-95 disabled:opacity-40"
+                    aria-label="Add note"
+                  >
+                    <Plus className="size-5" strokeWidth={2.25} />
+                  </button>
+                </Tooltip>
+                <div className="h-px w-7 bg-hairline" />
+                <div className="flex flex-col gap-1.5">
+                  {NOTE_COLORS.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setDraftColor(c)}
+                      aria-label={`Note color ${c}`}
+                      className={cn(
+                        "size-6 rounded-full border transition-transform hover:scale-110",
+                        draftColor === c ? "ring-2 ring-ink ring-offset-2 ring-offset-surface" : "border-black/5"
+                      )}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* Read-only banner for viewers / commenters */}
+          {joined && !canEdit && (
+            <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full border border-hairline bg-surface/90 px-3 py-1.5 text-xs font-medium text-muted shadow-soft backdrop-blur-sm">
+              {roleMeta(role).label} access · view only
+            </div>
+          )}
 
           {canvasSize.width > 0 && canvasSize.height > 0 && (
             <div className="absolute inset-0">
@@ -605,6 +731,7 @@ export default function BoardPage() {
                 }}
                 onMouseDown={(e) => {
                   if (e.target === e.target.getStage()) {
+                    setActiveNoteId(null);
                     if (e.evt.button === 1) setIsMiddlePanning(true);
                     const container = stageRef.current?.container();
                     if (container && (isPanning || e.evt.button === 1)) container.style.cursor = "grabbing";
@@ -647,6 +774,10 @@ export default function BoardPage() {
                     <Note
                       key={note.id}
                       note={note}
+                      canEdit={canEdit}
+                      canComment={canComment}
+                      mentionPeople={mentionPeople}
+                      onOpenComments={openComments}
                       onDragEnd={(e) => handleNoteDragEnd(e, note)}
                       activeNoteId={activeNoteId}
                       setActiveNoteId={setActiveNoteId}
@@ -687,7 +818,9 @@ export default function BoardPage() {
           <div className="pointer-events-none absolute bottom-4 left-4 z-10 hidden rounded-xl border border-hairline bg-surface/90 px-3 py-2 text-xs text-muted shadow-soft backdrop-blur-sm lg:block">
             <span className="font-medium text-ink-soft">Scroll</span> to zoom ·{" "}
             <span className="font-medium text-ink-soft">Drag</span> to pan ·{" "}
-            <span className="font-medium text-ink-soft">Double-click</span> a note to edit
+            <span className="font-medium text-ink-soft">Double-click</span> to edit ·{" "}
+            <span className="font-medium text-ink-soft">Del</span> to remove ·{" "}
+            <span className="font-medium text-ink-soft">Ctrl+D</span> to duplicate
           </div>
         </div>
 
@@ -703,7 +836,10 @@ export default function BoardPage() {
                 boardId={boardId}
                 board={board}
                 online={online}
-                initialTab={panel === "voice" ? "voice" : panel}
+                initialTab={panel}
+                commentNote={notes.find((n) => n.id === activeNoteId) || null}
+                canComment={canComment}
+                canManage={isOwner || canManageMembersRole(role)}
                 onClose={() => setPanel(null)}
               />
             </aside>

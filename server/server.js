@@ -13,10 +13,14 @@ import activityRouter from "./routes/activityRoutes.js";
 import notificationsRouter from "./routes/notificationsRoutes.js";
 import templatesRouter from "./routes/templatesRoutes.js";
 import peopleRouter from "./routes/peopleRoutes.js";
+import billingRouter from "./routes/billingRoutes.js";
+import { handleStripeWebhook } from "./controllers/billingController.js";
 import { socketAuth } from "./middleware/socketAuth.js";
 import { setIo } from "./lib/io.js";
 import { registerNotesSocket } from "./sockets/notesSocket.js";
 import { registerBoardsSocket } from "./sockets/boardsSocket.js";
+import { registerCommentsSocket } from "./sockets/commentsSocket.js";
+import { registerVoiceSocket } from "./sockets/voiceSocket.js";
 import { keepAliveService } from "./lib/keepAlive.js";
 
 const app = express();
@@ -39,6 +43,14 @@ app.use(
     credentials: true,
   })
 );
+// Stripe webhook must receive the raw body for signature verification, so it is
+// mounted with express.raw BEFORE the global JSON parser.
+app.post(
+  "/api/billing/webhook",
+  express.raw({ type: "application/json" }),
+  handleStripeWebhook
+);
+
 app.use(express.json());
 
 // Health check endpoint for Render
@@ -65,6 +77,7 @@ app.use("/api/boards", boardsRouter);
 app.use("/api/boards", boardMembersRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/templates", templatesRouter);
+app.use("/api/billing", billingRouter);
 
 // Socket.io setup
 const io = new Server(server, {
@@ -94,6 +107,8 @@ io.on("connection", (socket) => {
 
   registerBoardsSocket(io, socket);
   registerNotesSocket(io, socket);
+  registerCommentsSocket(io, socket);
+  registerVoiceSocket(io, socket);
 
   socket.on("disconnect", () => {
     console.log("Socket disconnected:", socket.id, "User:", socket.user?.name);
