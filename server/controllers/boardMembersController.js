@@ -1,9 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../prismaClient.js";
 
-import { addMemberSchema } from "../validation/schemas.js";
+import { addMemberSchema, inviteMemberSchema } from "../validation/schemas.js";
 import { getIo } from "../lib/io.js";
-
-const prisma = new PrismaClient();
 /**
  * GET /api/boards/:boardId/members
  * - allowed: board owner OR any board member
@@ -148,12 +146,13 @@ export async function addBoardMember(req, res) {
  */
 export async function inviteBoardMemberByEmail(req, res) {
   try {
-    const { email, role = "member" } = req.body ?? {};
+    const parsed = inviteMemberSchema.safeParse(req.body);
+    if (!parsed.success)
+      return res.status(400).json({ message: "Invalid email" });
+    const { email, role } = parsed.data;
     const boardId = req.params.boardId;
     const actorId = req.user?.id;
     if (!actorId) return res.status(401).json({ message: "Unauthorized" });
-    if (!email || typeof email !== "string")
-      return res.status(400).json({ message: "Invalid email" });
 
     // owner check
     const board = await prisma.board.findUnique({
@@ -196,13 +195,13 @@ export async function inviteBoardMemberByEmail(req, res) {
           },
           actorId,
         });
-      }
 
-      // also notify the added user's sockets so their 'myBoards' can update
-      io.to(`user:${user.id}`).emit("board:added", {
-        boardId,
-        board: { id: boardId }, // optionally include title/owner if you fetch it
-      });
+        // also notify the added user's sockets so their 'myBoards' can update
+        io.to(`user:${user.id}`).emit("board:added", {
+          boardId,
+          board: { id: boardId }, // optionally include title/owner if you fetch it
+        });
+      }
 
       return res.status(201).json({ member, message: "Added successfully" });
     } catch (e) {

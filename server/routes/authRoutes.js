@@ -1,12 +1,21 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
 import { register, login, getMe } from "../controllers/authController.js";
 import { requireAuth } from "../middleware/requireAuth.js";
-import { prisma } from "../prismaClient.js";
 
 const router = Router();
 
-router.post("/register", register);
-router.post("/login", login);
+// Throttle credential endpoints to slow brute-force / credential stuffing.
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20, // per IP per window
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many attempts, please try again later." },
+});
+
+router.post("/register", authLimiter, register);
+router.post("/login", authLimiter, login);
 
 router.get("/me", requireAuth, getMe);
 

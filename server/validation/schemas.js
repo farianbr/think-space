@@ -13,7 +13,18 @@ export const loginSchema = z.object({
 });
 
 // board schemas
+const roleSchema = z.enum(["member", "editor", "viewer"]).default("member");
+
+export const createBoardSchema = z.object({
+  title: z.string().trim().min(1).max(120),
+});
+
 export const addMemberSchema = z.object({
   userId: z.string().min(1),
-  role: z.string().optional().default("member"),
+  role: roleSchema,
+});
+
+export const inviteMemberSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  role: roleSchema,
 });

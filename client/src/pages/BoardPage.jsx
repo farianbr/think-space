@@ -2,6 +2,18 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Stage, Layer } from "react-konva";
+import Konva from "konva";
+
+// Cap the canvas pixel ratio on touch/mobile devices. Phones often report a
+// devicePixelRatio of 2-3, which forces Konva to repaint 4-9x as many pixels
+// every pan frame — the main cause of laggy panning. Must be set at module load,
+// before any Stage/Layer canvas is created. Desktop keeps full sharpness.
+if (typeof window !== "undefined") {
+  const isTouch = window.innerWidth < 1024 || "ontouchstart" in window;
+  if (isTouch) {
+    Konva.pixelRatio = Math.min(window.devicePixelRatio || 1, 1.5);
+  }
+}
 import { toast } from "react-hot-toast";
 import {
   ArrowLeft,
@@ -263,6 +275,16 @@ export default function BoardPage() {
       window.removeEventListener("keyup", up);
     };
   }, []);
+
+  // Tell the browser not to handle touch gestures on the canvas itself. Without
+  // touch-action: none the mobile browser delays/insets touch events for its own
+  // scroll/zoom handling, which makes Konva panning feel laggy and unresponsive.
+  useEffect(() => {
+    const stage = stageRef.current;
+    if (!stage) return;
+    const container = stage.container();
+    if (container) container.style.touchAction = "none";
+  }, [canvasSize.width, canvasSize.height]);
 
   // Touch events for mobile panning - simplified approach
   useEffect(() => {
@@ -707,7 +729,6 @@ export default function BoardPage() {
           {canvasSize.width > 0 && canvasSize.height > 0 && (
             <div className="absolute inset-0 pt-16 lg:pt-0">
               <Stage
-                key={`stage-${notes.length}`} // Force re-mount when notes change
                 ref={stageRef}
                 width={canvasWidth}
                 height={

@@ -365,6 +365,8 @@ export default function Note({
         height={height}
         fill="rgba(0,0,0,0.1)"
         cornerRadius={8}
+        listening={false}
+        perfectDrawEnabled={false}
       />
 
       {/* Main note background */}
@@ -387,6 +389,8 @@ export default function Note({
         shadowBlur={isDragging ? 8 : 4}
         shadowOffset={{ x: 2, y: 2 }}
         shadowOpacity={0.3}
+        perfectDrawEnabled={false}
+        shadowForStrokeEnabled={false}
         onDblClick={
           isMobile
             ? null
@@ -407,6 +411,8 @@ export default function Note({
             width={width - 24}
             height={1}
             fill="rgba(0,0,0,0.03)"
+            listening={false}
+            perfectDrawEnabled={false}
           />
           {height > 70 && (
             <Rect
@@ -415,6 +421,8 @@ export default function Note({
               width={width - 24}
               height={1}
               fill="rgba(0,0,0,0.03)"
+              listening={false}
+              perfectDrawEnabled={false}
             />
           )}
           {height > 90 && (
@@ -424,6 +432,8 @@ export default function Note({
               width={width - 24}
               height={1}
               fill="rgba(0,0,0,0.03)"
+              listening={false}
+              perfectDrawEnabled={false}
             />
           )}
           {height > 110 && (
@@ -433,6 +443,8 @@ export default function Note({
               width={width - 24}
               height={1}
               fill="rgba(0,0,0,0.03)"
+              listening={false}
+              perfectDrawEnabled={false}
             />
           )}
         </>

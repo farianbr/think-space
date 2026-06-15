@@ -1,8 +1,7 @@
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../prismaClient.js";
 import { getNotesSnapshot } from "../controllers/notesController.js";
 import { addOnline, getOnline, removeOnline } from "../lib/online.js";
-
-const prisma = new PrismaClient();
+import { userCanAccessBoard } from "../lib/boardAccess.js";
 
 export function registerBoardsSocket(io, socket) {
   socket.on("board:join", async (boardId, ack) => {
@@ -78,10 +77,19 @@ export function registerBoardsSocket(io, socket) {
     }
   });
 
-  socket.on("presence:request", ({ boardId }, ack) => {
-    const onlineList = getOnline(boardId);
-    io.to(socket.id).emit("presence:list", { boardId, online: onlineList });
-    ack?.({ ok: true });
+  socket.on("presence:request", async ({ boardId }, ack) => {
+    try {
+      const userId = socket.user?.id;
+      if (!(await userCanAccessBoard(boardId, userId)))
+        return ack?.({ ok: false, status: 403, message: "Forbidden" });
+
+      const onlineList = getOnline(boardId);
+      io.to(socket.id).emit("presence:list", { boardId, online: onlineList });
+      ack?.({ ok: true });
+    } catch (err) {
+      console.error("presence:request error", err);
+      ack?.({ ok: false, message: err.message });
+    }
   });
 
   socket.on("disconnecting", () => {

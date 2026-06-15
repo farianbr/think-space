@@ -1,3 +1,4 @@
+import "./lib/loadEnv.js"; // must run first: loads .env / validates secrets
 import express from "express";
 import http from "http";
 import { Server } from "socket.io";
@@ -16,6 +17,13 @@ import { keepAliveService } from "./lib/keepAlive.js";
 
 const app = express();
 const server = http.createServer(app);
+
+// Render (and most PaaS) terminate TLS at a proxy and forward the client IP via
+// X-Forwarded-For. Trust the first proxy hop so rate limiting keys on the real
+// client IP rather than the proxy.
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1);
+}
 
 // security + JSON parsing
 app.use(helmet());
