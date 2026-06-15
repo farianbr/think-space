@@ -8,6 +8,14 @@ import { getIo } from "./io.js";
 export async function notify({ userId, type, boardId, actorId, data }) {
   if (!userId || !type) return null;
   try {
+    // Respect the recipient's notification preferences. A type is muted only
+    // when explicitly set to false in preferences.notifications; default is on.
+    const recipient = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { preferences: true },
+    });
+    if (recipient?.preferences?.notifications?.[type] === false) return null;
+
     const notification = await prisma.notification.create({
       data: {
         userId,

@@ -11,6 +11,7 @@ export { default as Spinner } from "./Spinner";
 export { default as Skeleton } from "./Skeleton";
 export { default as EmptyState } from "./EmptyState";
 export { default as Segmented } from "./Segmented";
+export { default as Switch } from "./Switch";
 export { default as Tooltip } from "./Tooltip";
 export { default as DropdownMenu } from "./DropdownMenu";
 export { default as ThemeToggle } from "./ThemeToggle";

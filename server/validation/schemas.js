@@ -10,6 +10,8 @@ export const registerSchema = z.object({
 export const loginSchema = z.object({
   email: z.string().trim().toLowerCase().email(),
   password: z.string().min(8).max(72),
+  // Optional TOTP code, supplied on the second step when 2FA is enabled.
+  code: z.string().trim().optional(),
 });
 
 // board schemas
@@ -67,3 +69,22 @@ export const updateProfileSchema = z
     preferences: z.record(z.string(), z.any()).optional(),
   })
   .refine((d) => Object.keys(d).length > 0, { message: "No fields to update" });
+
+export const changePasswordSchema = z.object({
+  currentPassword: z.string().min(8).max(72),
+  newPassword: z.string().min(8).max(72),
+});
+
+// two-factor (TOTP) — 6-digit code from an authenticator app
+export const enableTwoFactorSchema = z.object({
+  code: z.string().trim().regex(/^\d{6}$/),
+});
+
+export const disableTwoFactorSchema = z.object({
+  password: z.string().min(8).max(72),
+});
+
+// Regenerating recovery codes is password-gated, same shape as disable.
+export const regenerateRecoveryCodesSchema = z.object({
+  password: z.string().min(8).max(72),
+});

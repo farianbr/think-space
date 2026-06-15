@@ -21,3 +21,13 @@ export function useUpdateProfile() {
     },
   });
 }
+
+/** Change the current user's password (verifies the current one server-side). */
+export function useChangePassword() {
+  return useMutation({
+    mutationFn: async (payload) => {
+      const res = await api.post("/auth/change-password", payload);
+      return res.data;
+    },
+  });
+}

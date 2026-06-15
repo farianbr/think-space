@@ -57,6 +57,13 @@ model User {
   avatarUrl String?
   // Free-form JSON for UI preferences (theme is also persisted client-side).
   preferences Json?
+  // TOTP two-factor auth. Secret is stored once setup begins; `enabled` flips
+  // true only after the user verifies a code from their authenticator app.
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret  String?
+  // Bcrypt-hashed single-use recovery codes, consumed one-by-one at sign-in
+  // when the authenticator device is unavailable.
+  twoFactorRecoveryCodes String[] @default([])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

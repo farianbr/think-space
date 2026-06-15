@@ -8,19 +8,32 @@ import {
   CreditCard,
   Users,
   Lock,
+  UserPlus,
+  AtSign,
+  KeyRound,
 } from "lucide-react";
 
 import { useAuth } from "../contexts/authContext";
-import { useUpdateProfile } from "../hooks/profile";
-import { Avatar, Button, Card, Field, Input, ThemeToggle, Badge } from "../components/ui";
+import { useUpdateProfile, useChangePassword } from "../hooks/profile";
+import TwoFactorSettings from "../components/settings/TwoFactorSettings";
+import {
+  Avatar,
+  Button,
+  Card,
+  Field,
+  Input,
+  ThemeToggle,
+  Badge,
+  Switch,
+} from "../components/ui";
 import { cn } from "../lib/cn";
 
 const SECTIONS = [
   { id: "profile", label: "Profile", icon: User },
   { id: "appearance", label: "Appearance", icon: Palette },
-  { id: "notifications", label: "Notifications", icon: Bell, soon: true },
+  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "security", label: "Security", icon: Shield },
   { id: "team", label: "Team", icon: Users, soon: true },
-  { id: "security", label: "Security", icon: Shield, soon: true },
   { id: "billing", label: "Billing", icon: CreditCard, soon: true },
 ];
 
@@ -98,6 +111,161 @@ function AppearanceSection() {
   );
 }
 
+const NOTIFICATION_TYPES = [
+  {
+    key: "invite",
+    icon: UserPlus,
+    title: "Board invitations",
+    description: "When someone adds you to a board.",
+  },
+  {
+    key: "member_added",
+    icon: Users,
+    title: "New collaborators",
+    description: "When someone joins a board you're on.",
+  },
+  {
+    key: "mention",
+    icon: AtSign,
+    title: "Mentions",
+    description: "When someone mentions you in a board.",
+  },
+];
+
+function NotificationsSection() {
+  const { user } = useAuth();
+  const update = useUpdateProfile();
+  const prefs = user?.preferences?.notifications || {};
+  // Default on: a type is muted only when explicitly false.
+  const isOn = (key) => prefs[key] !== false;
+  const [saving, setSaving] = useState(null);
+
+  const toggle = async (key, value) => {
+    setSaving(key);
+    const nextPrefs = {
+      ...(user?.preferences || {}),
+      notifications: { ...prefs, [key]: value },
+    };
+    try {
+      await update.mutateAsync({ preferences: nextPrefs });
+    } catch {
+      toast.error("Could not update preference");
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <Card className="p-6">
+      <h2 className="text-base font-semibold text-ink">Notifications</h2>
+      <p className="mt-1 text-sm text-muted">
+        Choose what shows up in your notification center.
+      </p>
+
+      <div className="mt-6 divide-y divide-hairline">
+        {NOTIFICATION_TYPES.map((t) => {
+          const Icon = t.icon;
+          return (
+            <div key={t.key} className="flex items-center gap-4 py-4 first:pt-0 last:pb-0">
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-sunken text-muted">
+                <Icon className="size-4" strokeWidth={2} aria-hidden />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-ink">{t.title}</p>
+                <p className="text-xs text-muted">{t.description}</p>
+              </div>
+              <Switch
+                checked={isOn(t.key)}
+                disabled={saving === t.key}
+                onChange={(v) => toggle(t.key, v)}
+                label={t.title}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+function SecuritySection() {
+  const changePw = useChangePassword();
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+
+  const reset = () => {
+    setCurrent("");
+    setNext("");
+    setConfirm("");
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (next.length < 8) return toast.error("New password must be at least 8 characters");
+    if (next !== confirm) return toast.error("New passwords don't match");
+    try {
+      await changePw.mutateAsync({ currentPassword: current, newPassword: next });
+      toast.success("Password updated");
+      reset();
+    } catch (err) {
+      toast.error(err?.response?.data?.message || "Could not update password");
+    }
+  };
+
+  return (
+    <div className="space-y-5">
+      <Card className="p-6">
+        <div className="flex items-center gap-2">
+          <KeyRound className="size-4 text-muted" strokeWidth={2} aria-hidden />
+          <h2 className="text-base font-semibold text-ink">Change password</h2>
+        </div>
+        <p className="mt-1 text-sm text-muted">
+          Use at least 8 characters. You'll stay signed in on this device.
+        </p>
+
+        <form onSubmit={submit} className="mt-6 max-w-md space-y-4">
+          <Field label="Current password">
+            <Input
+              type="password"
+              autoComplete="current-password"
+              value={current}
+              onChange={(e) => setCurrent(e.target.value)}
+            />
+          </Field>
+          <Field label="New password">
+            <Input
+              type="password"
+              autoComplete="new-password"
+              value={next}
+              onChange={(e) => setNext(e.target.value)}
+            />
+          </Field>
+          <Field label="Confirm new password">
+            <Input
+              type="password"
+              autoComplete="new-password"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+            />
+          </Field>
+          <div>
+            <Button
+              type="submit"
+              loading={changePw.isPending}
+              disabled={!current || !next || !confirm}
+            >
+              Update password
+            </Button>
+          </div>
+        </form>
+      </Card>
+
+      <TwoFactorSettings />
+    </div>
+  );
+}
+
 function ComingSoon({ section }) {
   return (
     <Card className="p-6">
@@ -152,6 +320,8 @@ export default function SettingsPage() {
         <div>
           {active === "profile" && <ProfileSection />}
           {active === "appearance" && <AppearanceSection />}
+          {active === "notifications" && <NotificationsSection />}
+          {active === "security" && <SecuritySection />}
           {section?.soon && <ComingSoon section={section} />}
         </div>
       </div>
