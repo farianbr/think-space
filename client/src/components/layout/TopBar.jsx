@@ -73,7 +73,7 @@ export default function TopBar({ title, onOpenMenu }) {
             </div>
           </div>
           <DropdownMenu.Separator />
-          <DropdownMenu.Item icon={User} onSelect={() => navigate("/settings")}>
+          <DropdownMenu.Item icon={User} onSelect={() => navigate("/profile")}>
             Profile
           </DropdownMenu.Item>
           <DropdownMenu.Item icon={Settings} onSelect={() => navigate("/settings")}>

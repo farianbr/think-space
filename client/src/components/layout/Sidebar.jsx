@@ -4,6 +4,8 @@ import {
   FolderOpen,
   Star,
   LayoutTemplate,
+  Users,
+  Activity,
   Plus,
   Sparkles,
   X,
@@ -17,6 +19,8 @@ const NAV = [
   { to: "/boards", label: "Boards", icon: FolderOpen },
   { to: "/boards?filter=favorites", label: "Favorites", icon: Star },
   { to: "/templates", label: "Templates", icon: LayoutTemplate },
+  { to: "/team", label: "Team", icon: Users },
+  { to: "/activity", label: "Activity", icon: Activity },
 ];
 
 function NavItem({ to, label, icon: Icon, onNavigate }) {

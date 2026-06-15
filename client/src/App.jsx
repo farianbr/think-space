@@ -16,6 +16,9 @@ import RegisterPage from "./pages/RegisterPage";
 const BoardsDashboard = lazy(() => import("./pages/BoardsDashboard"));
 const BoardsLibrary = lazy(() => import("./pages/BoardsLibrary"));
 const TemplatesPage = lazy(() => import("./pages/TemplatesPage"));
+const TeamPage = lazy(() => import("./pages/TeamPage"));
+const ActivityPage = lazy(() => import("./pages/ActivityPage"));
+const ProfilePage = lazy(() => import("./pages/ProfilePage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const BoardPage = lazy(() => import("./pages/BoardPage"));
 const ForgotPasswordPage = lazy(() => import("./pages/ForgotPasswordPage"));
@@ -45,6 +48,9 @@ function AppContent() {
             <Route path="/dashboard" element={<BoardsDashboard />} />
             <Route path="/boards" element={<BoardsLibrary />} />
             <Route path="/templates" element={<TemplatesPage />} />
+            <Route path="/team" element={<TeamPage />} />
+            <Route path="/activity" element={<ActivityPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>
           <Route path="/board/:boardId" element={<BoardPage />} />

@@ -12,6 +12,7 @@ import authRouter from "./routes/authRoutes.js";
 import activityRouter from "./routes/activityRoutes.js";
 import notificationsRouter from "./routes/notificationsRoutes.js";
 import templatesRouter from "./routes/templatesRoutes.js";
+import peopleRouter from "./routes/peopleRoutes.js";
 import { socketAuth } from "./middleware/socketAuth.js";
 import { setIo } from "./lib/io.js";
 import { registerNotesSocket } from "./sockets/notesSocket.js";
@@ -58,6 +59,7 @@ app.get("/api/health", (req, res) => {
 // REST routes
 app.use("/api", notesRouter);
 app.use("/api", activityRouter);
+app.use("/api", peopleRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/boards", boardsRouter);
 app.use("/api/boards", boardMembersRouter);

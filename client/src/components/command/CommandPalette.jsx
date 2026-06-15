@@ -13,6 +13,9 @@ import {
   Star,
   CornerDownLeft,
   Sparkles,
+  Users,
+  Activity,
+  User,
 } from "lucide-react";
 import { useMyBoards } from "../../hooks/boards";
 import { useTemplates, useUseTemplate } from "../../hooks/templates";
@@ -61,6 +64,9 @@ export default function CommandPalette({ open, onClose, onCreateBoard }) {
       { id: "library", group: "Navigate", icon: FolderOpen, label: "Open Boards library", run: () => go("/boards") },
       { id: "favorites", group: "Navigate", icon: Star, label: "Open Favorites", run: () => go("/boards?filter=favorites") },
       { id: "templates", group: "Navigate", icon: LayoutTemplate, label: "Browse Templates", run: () => go("/templates") },
+      { id: "team", group: "Navigate", icon: Users, label: "Open Team", keywords: "people collaborators", run: () => go("/team") },
+      { id: "activity", group: "Navigate", icon: Activity, label: "Open Activity", keywords: "feed history", run: () => go("/activity") },
+      { id: "profile", group: "Navigate", icon: User, label: "Open Profile", keywords: "account me", run: () => go("/profile") },
       { id: "settings", group: "Navigate", icon: Settings, label: "Open Settings", run: () => go("/settings") },
       { id: "theme", group: "Actions", icon: SunMoon, label: "Toggle theme", run: () => { cycleTheme(); } },
     ];
