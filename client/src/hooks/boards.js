@@ -3,25 +3,23 @@ import { api } from "../lib/api";
 import { socket } from "../lib/socket";
 
 /**
- * Fetch current user's boards (owned OR member)
- * Query key: ['myBoards']
+ * Boards for the current user, scoped by library filter.
+ * filter: "all" | "owned" | "shared" | "favorites" | "archived"
+ * Query key: ['myBoards', filter]
  */
-export function useMyBoards() {
+export function useMyBoards(filter = "all") {
   return useQuery({
-    queryKey: ["myBoards"],
+    queryKey: ["myBoards", filter],
     queryFn: async () => {
-      const res = await api.get("/boards/my");
+      const res = await api.get("/boards/my", { params: { filter } });
       return res.data.boards;
     },
-    staleTime: 1000 * 30,
+    staleTime: 1000 * 20,
     refetchOnWindowFocus: false,
   });
 }
 
-/**
- * Create a new board
- * - invalidates ['myBoards'] on success
- */
+/** Create a new board. Invalidates every board list. */
 export function useCreateBoard() {
   const qc = useQueryClient();
   return useMutation({
@@ -29,19 +27,26 @@ export function useCreateBoard() {
       const res = await api.post("/boards", payload);
       return res.data.board;
     },
-    onSuccess: () => {
-      // optimistic approach: refetch list
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["myBoards"] }),
+  });
+}
+
+/** Patch a board (rename / description / archive / restore). Owner only. */
+export function useUpdateBoard() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ boardId, ...patch }) => {
+      const res = await api.patch(`/boards/${boardId}`, patch);
+      return res.data.board;
+    },
+    onSuccess: (board) => {
       qc.invalidateQueries({ queryKey: ["myBoards"] });
-      // optionally navigate to newly created board; the app should handle that after mutation returns
+      if (board?.id) qc.invalidateQueries({ queryKey: ["board", board.id] });
     },
   });
 }
 
-/**
- * Delete a board (owner only)
- * - invalidates ['myBoards'] on success
- * - also emits handled server-side (board:deleted) which other clients will receive
- */
+/** Delete a board (owner only). */
 export function useDeleteBoard() {
   const qc = useQueryClient();
   return useMutation({
@@ -51,42 +56,72 @@ export function useDeleteBoard() {
     },
     onSuccess: (boardId) => {
       qc.invalidateQueries({ queryKey: ["myBoards"] });
-      // Also remove any active board cache if you have one: e.g., ['board', boardId]
       qc.removeQueries({ queryKey: ["board", boardId] });
     },
   });
 }
 
 /**
- * Hook to listen for boards-related socket events and update cache.
- * Currently listens to 'board:deleted' and removes board from ['myBoards'] cache.
+ * Toggle a board star with optimistic update across all cached board lists.
+ */
+export function useToggleStar() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ boardId, isStarred }) => {
+      if (isStarred) await api.delete(`/boards/${boardId}/star`);
+      else await api.post(`/boards/${boardId}/star`);
+      return { boardId, isStarred: !isStarred };
+    },
+    onMutate: async ({ boardId, isStarred }) => {
+      await qc.cancelQueries({ queryKey: ["myBoards"] });
+      const snapshots = qc.getQueriesData({ queryKey: ["myBoards"] });
+      for (const [key, data] of snapshots) {
+        if (!Array.isArray(data)) continue;
+        qc.setQueryData(
+          key,
+          data.map((b) => (b.id === boardId ? { ...b, isStarred: !isStarred } : b))
+        );
+      }
+      return { snapshots };
+    },
+    onError: (_err, _vars, ctx) => {
+      ctx?.snapshots?.forEach(([key, data]) => qc.setQueryData(key, data));
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ["myBoards"] }),
+  });
+}
+
+/**
+ * Listen for boards-related socket events and keep caches fresh.
+ * Returns a `setup()` to call inside an effect.
  */
 export function useBoardsSocket() {
   const qc = useQueryClient();
 
-  // NOTE: keep listeners idempotent; returned cleanup handles removing them
-
   const setup = () => {
-    function onBoardDeleted({ boardId }) {
-      qc.setQueryData(["myBoards"], (old = []) =>
-        old.filter((b) => b.id !== boardId)
-      );
-    }
+    const refresh = () => qc.invalidateQueries({ queryKey: ["myBoards"] });
 
-    function onBoardAdded() {
-      // simple: refetch myBoards to pick up the new board
-      qc.invalidateQueries({ queryKey: ["myBoards"] });
+    function onBoardDeleted({ boardId }) {
+      const lists = qc.getQueriesData({ queryKey: ["myBoards"] });
+      for (const [key, data] of lists) {
+        if (Array.isArray(data))
+          qc.setQueryData(
+            key,
+            data.filter((b) => b.id !== boardId)
+          );
+      }
     }
 
     socket.on("board:deleted", onBoardDeleted);
-    socket.on("board:added", onBoardAdded);
+    socket.on("board:added", refresh);
+    socket.on("board:updated", refresh);
 
     return () => {
       socket.off("board:deleted", onBoardDeleted);
-      socket.off("board:added", onBoardAdded);
+      socket.off("board:added", refresh);
+      socket.off("board:updated", refresh);
     };
   };
 
-  // Return a setup function so consumers can call inside useEffect
   return { setup };
 }

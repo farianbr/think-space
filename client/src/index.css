@@ -1,1 +1,255 @@
 @import "tailwindcss";
+
+/* ------------------------------------------------------------------ *
+ * Think Space — Design System
+ * Warm-neutral surfaces · near-black "ink" primary · restrained amber
+ * Dark mode is class-based (.dark on <html>) and flips CSS variables.
+ * ------------------------------------------------------------------ */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Design tokens exposed to Tailwind as utilities (bg-surface, text-ink, …).
+   Values resolve through CSS variables so .dark can override them. */
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, Helvetica, Arial, sans-serif;
+
+  /* Surfaces */
+  --color-canvas: var(--ts-canvas);
+  --color-surface: var(--ts-surface);
+  --color-elevated: var(--ts-elevated);
+  --color-sunken: var(--ts-sunken);
+
+  /* Text + primary ink (ink doubles as the primary-button background) */
+  --color-ink: var(--ts-ink);
+  --color-ink-contrast: var(--ts-ink-contrast);
+  --color-ink-soft: var(--ts-ink-soft);
+  --color-muted: var(--ts-muted);
+  --color-faint: var(--ts-faint);
+
+  /* Lines */
+  --color-hairline: var(--ts-hairline);
+  --color-line: var(--ts-line);
+
+  /* Accent (amber) + tints */
+  --color-accent: var(--ts-accent);
+  --color-accent-contrast: var(--ts-accent-contrast);
+  --color-accent-soft: var(--ts-accent-soft);
+
+  /* Muted semantics */
+  --color-positive: var(--ts-positive);
+  --color-positive-soft: var(--ts-positive-soft);
+  --color-danger: var(--ts-danger);
+  --color-danger-soft: var(--ts-danger-soft);
+  --color-info: var(--ts-info);
+
+  /* Radii */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 18px;
+  --radius-2xl: 24px;
+
+  /* Soft, layered shadows (no glassmorphism) */
+  --shadow-soft: 0 1px 2px var(--ts-shadow-1);
+  --shadow-card: 0 1px 2px var(--ts-shadow-1), 0 4px 12px var(--ts-shadow-2);
+  --shadow-pop: 0 6px 16px var(--ts-shadow-2), 0 12px 32px var(--ts-shadow-3);
+  --shadow-lift: 0 10px 30px var(--ts-shadow-3);
+
+  /* Motion */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Light theme (default) */
+:root {
+  --ts-canvas: #f7f6f3;
+  --ts-surface: #ffffff;
+  --ts-elevated: #ffffff;
+  --ts-sunken: #f1efea;
+
+  --ts-ink: #1c1b19;
+  --ts-ink-contrast: #ffffff;
+  --ts-ink-soft: #44403c;
+  --ts-muted: #78716c;
+  --ts-faint: #a8a29e;
+
+  --ts-hairline: #e9e6e0;
+  --ts-line: #ddd9d1;
+
+  --ts-accent: #c2781d;
+  --ts-accent-contrast: #ffffff;
+  --ts-accent-soft: #f7eede;
+
+  --ts-positive: #3f7d56;
+  --ts-positive-soft: #e4efe6;
+  --ts-danger: #b4452f;
+  --ts-danger-soft: #f6e6e1;
+  --ts-info: #3f6d7d;
+
+  --ts-shadow-1: rgba(28, 27, 25, 0.05);
+  --ts-shadow-2: rgba(28, 27, 25, 0.06);
+  --ts-shadow-3: rgba(28, 27, 25, 0.08);
+
+  color-scheme: light;
+}
+
+/* Dark theme — warm near-black, ink flips to near-white */
+.dark {
+  --ts-canvas: #161513;
+  --ts-surface: #201f1c;
+  --ts-elevated: #27251f;
+  --ts-sunken: #121110;
+
+  --ts-ink: #f4f2ee;
+  --ts-ink-contrast: #1c1b19;
+  --ts-ink-soft: #d3cfc7;
+  --ts-muted: #a39e95;
+  --ts-faint: #75716a;
+
+  --ts-hairline: #322f29;
+  --ts-line: #3d3a33;
+
+  --ts-accent: #e0a44a;
+  --ts-accent-contrast: #1c1b19;
+  --ts-accent-soft: #2e2719;
+
+  --ts-positive: #6bbb86;
+  --ts-positive-soft: #1e2a22;
+  --ts-danger: #d9745d;
+  --ts-danger-soft: #2e1f1b;
+  --ts-info: #79a7b8;
+
+  --ts-shadow-1: rgba(0, 0, 0, 0.30);
+  --ts-shadow-2: rgba(0, 0, 0, 0.36);
+  --ts-shadow-3: rgba(0, 0, 0, 0.45);
+
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-hairline);
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  /* Calm, consistent focus ring */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: var(--color-accent-soft);
+    color: var(--color-ink);
+  }
+
+  /* Refined scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background-color: var(--color-line);
+    border-radius: 9999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-faint);
+  }
+}
+
+@layer utilities {
+  /* Subtle entrance/feedback animations used across surfaces */
+  @keyframes ts-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes ts-pop-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
+  @keyframes ts-slide-in-right {
+    from {
+      opacity: 0;
+      transform: translateX(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+  @keyframes ts-shimmer {
+    100% {
+      transform: translateX(100%);
+    }
+  }
+
+  .animate-fade-in {
+    animation: ts-fade-in 0.18s var(--ease-out-soft) both;
+  }
+  .animate-pop-in {
+    animation: ts-pop-in 0.2s var(--ease-out-soft) both;
+  }
+  .animate-slide-in-right {
+    animation: ts-slide-in-right 0.24s var(--ease-out-soft) both;
+  }
+
+  .ts-skeleton {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-sunken);
+  }
+  .ts-skeleton::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    transform: translateX(-100%);
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--ts-shadow-2),
+      transparent
+    );
+    animation: ts-shimmer 1.4s infinite;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

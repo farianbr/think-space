@@ -9,15 +9,27 @@ datasource db {
 }
 
 model Board {
-  id        String   @id @default(cuid())
-  title     String
-  ownerId   String?
-  owner     User?    @relation(fields: [ownerId], references: [id], onDelete: Cascade, name: "BoardOwner")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  icon        String? // optional lucide icon name
+  color       String? // optional accent color (hex)
+  isArchived  Boolean  @default(false)
+  ownerId     String?
+  owner       User?    @relation(fields: [ownerId], references: [id], onDelete: Cascade, name: "BoardOwner")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  // Tracks last meaningful change (note edited, member added, …) for sorting
+  // and "recent activity" surfaces, independent of schema-level updatedAt.
+  lastActivityAt DateTime?
 
-  notes   Note[]
-  members BoardMember[]
+  notes      Note[]
+  members    BoardMember[]
+  stars      BoardStar[]
+  activities Activity[]
+
+  @@index([ownerId])
+  @@index([isArchived])
 }
 
 model Note {
@@ -42,11 +54,17 @@ model User {
   email     String   @unique
   name      String?
   password  String // bcrypt hash
+  avatarUrl String?
+  // Free-form JSON for UI preferences (theme is also persisted client-side).
+  preferences Json?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  boards  Board[]       @relation("BoardOwner")
-  members BoardMember[]
+  boards        Board[]        @relation("BoardOwner")
+  members       BoardMember[]
+  stars         BoardStar[]
+  notifications Notification[] @relation("NotificationRecipient")
+  activities    Activity[]
 }
 
 model BoardMember {
@@ -61,4 +79,66 @@ model BoardMember {
 
   @@unique([boardId, userId])
   @@index([userId])
+}
+
+// Favorites / starred boards (per user).
+model BoardStar {
+  id        String   @id @default(cuid())
+  userId    String
+  boardId   String
+  createdAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, boardId])
+  @@index([userId])
+  @@index([boardId])
+}
+
+// Append-only activity log feeding the dashboard and board activity panel.
+model Activity {
+  id        String   @id @default(cuid())
+  boardId   String
+  actorId   String?
+  type      String // e.g. board.created, member.added, note.created
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  board Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([boardId, createdAt])
+  @@index([createdAt])
+}
+
+// Per-user notification feed (invites, mentions, workspace updates).
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String // invite, member_added, mention, board_update
+  boardId   String?
+  actorId   String?
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation("NotificationRecipient", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+// Starter templates surfaced in the gallery / command palette.
+model Template {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  category    String
+  description String
+  thumbnail   String?
+  // Blueprint of notes (and later shapes) to clone into a new board.
+  blueprint   Json
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
 }

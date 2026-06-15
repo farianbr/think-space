@@ -1,7 +1,13 @@
 import { prisma } from "../prismaClient.js";
 
-import { addMemberSchema, inviteMemberSchema } from "../validation/schemas.js";
+import {
+  addMemberSchema,
+  inviteMemberSchema,
+  updateMemberRoleSchema,
+} from "../validation/schemas.js";
 import { getIo } from "../lib/io.js";
+import { notify } from "../lib/notify.js";
+import { logActivity } from "../lib/activity.js";
 /**
  * GET /api/boards/:boardId/members
  * - allowed: board owner OR any board member
@@ -157,7 +163,7 @@ export async function inviteBoardMemberByEmail(req, res) {
     // owner check
     const board = await prisma.board.findUnique({
       where: { id: boardId },
-      select: { id: true, ownerId: true },
+      select: { id: true, ownerId: true, title: true },
     });
     if (!board) return res.status(404).json({ message: "Board not found" });
     if (board.ownerId !== actorId)
@@ -202,6 +208,21 @@ export async function inviteBoardMemberByEmail(req, res) {
           board: { id: boardId }, // optionally include title/owner if you fetch it
         });
       }
+
+      // Persistent notification for the invited user + board activity entry.
+      await notify({
+        userId: user.id,
+        type: "invite",
+        boardId,
+        actorId,
+        data: { boardTitle: board.title, role: member.role },
+      });
+      logActivity({
+        boardId,
+        actorId,
+        type: "member.added",
+        meta: { userId: user.id, email: user.email, role: member.role },
+      });
 
       return res.status(201).json({ member, message: "Added successfully" });
     } catch (e) {
@@ -266,6 +287,63 @@ export async function removeBoardMember(req, res) {
     }
   } catch (err) {
     console.error("removeBoardMember error", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+}
+
+/**
+ * PATCH /api/boards/:boardId/members/:userId  body: { role }
+ * - allowed: only board owner
+ * - cannot change the owner's role (ownership is implicit)
+ */
+export async function updateMemberRole(req, res) {
+  try {
+    const parsed = updateMemberRoleSchema.safeParse(req.body);
+    if (!parsed.success) return res.status(400).json({ message: "Invalid role" });
+
+    const boardId = req.params.boardId;
+    const targetUserId = req.params.userId;
+    const actorId = req.user?.id;
+    if (!actorId) return res.status(401).json({ message: "Unauthorized" });
+
+    const board = await prisma.board.findUnique({
+      where: { id: boardId },
+      select: { id: true, ownerId: true },
+    });
+    if (!board) return res.status(404).json({ message: "Board not found" });
+    if (board.ownerId !== actorId)
+      return res.status(403).json({ message: "Only board owner can change roles" });
+    if (targetUserId === board.ownerId)
+      return res.status(400).json({ message: "Cannot change the owner's role" });
+
+    const existing = await prisma.boardMember.findFirst({ where: { boardId, userId: targetUserId } });
+    if (!existing) return res.status(404).json({ message: "Member not found" });
+
+    const member = await prisma.boardMember.update({
+      where: { id: existing.id },
+      data: { role: parsed.data.role },
+      include: { user: { select: { id: true, email: true, name: true } } },
+    });
+
+    const io = getIo();
+    if (io) {
+      io.to(`room:board:${boardId}`).emit("member:updated", {
+        boardId,
+        member: { id: member.id, role: member.role, user: member.user, userId: member.userId },
+        actorId,
+      });
+    }
+
+    logActivity({
+      boardId,
+      actorId,
+      type: "member.role_changed",
+      meta: { userId: targetUserId, role: member.role },
+    });
+
+    return res.json({ member, message: "Role updated" });
+  } catch (err) {
+    console.error("updateMemberRole error", err);
     return res.status(500).json({ message: "Server error" });
   }
 }

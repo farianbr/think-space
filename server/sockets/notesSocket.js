@@ -3,6 +3,7 @@ import {
   updateNote,
   deleteNote,
 } from "../controllers/notesController.js";
+import { logActivity } from "../lib/activity.js";
 
 export function registerNotesSocket(io, socket) {
   const ensureJoined = (id) => socket.rooms.has(boardRoom(id));
@@ -19,6 +20,7 @@ export function registerNotesSocket(io, socket) {
         actorId: socket.user?.id,
         socketId: socket.id,
       });
+      logActivity({ boardId, actorId: socket.user?.id, type: "note.created" });
       ack?.({ ok: true, note });
     } catch (err) {
       ack?.({ ok: false, message: err.message });
@@ -63,6 +65,7 @@ export function registerNotesSocket(io, socket) {
         actorId: socket.user?.id,
         socketId: socket.id,
       });
+      logActivity({ boardId, actorId: socket.user?.id, type: "note.deleted" });
       ack?.({ ok: true });
     } catch (err) {
       ack?.({ ok: false, message: err.message });

@@ -1,189 +1,163 @@
-import React from "react";
 import { Link } from "react-router-dom";
+import {
+  Sparkles,
+  Zap,
+  Users,
+  StickyNote,
+  Network,
+  Mic,
+  ArrowRight,
+} from "lucide-react";
 import { useAuth } from "../contexts/authContext";
+import { Button, ThemeToggle } from "../components/ui";
+
+const FEATURES = [
+  { icon: Zap, title: "Real-time canvas", text: "Edits, cursors and presence sync the instant they happen — no refresh, no friction." },
+  { icon: StickyNote, title: "Sticky thinking", text: "Drop notes, arrange ideas, and watch structure emerge on an infinite canvas." },
+  { icon: Users, title: "Made for teams", text: "Invite collaborators with precise roles — admin, editor, commenter or viewer." },
+  { icon: Network, title: "Templates that start you", text: "Brainstorms, roadmaps, retros and mind maps, ready in a single click." },
+  { icon: Mic, title: "Voice, soon", text: "Talk it through without leaving the board. Elegant, lightweight voice rooms." },
+  { icon: Sparkles, title: "Calm by design", text: "A quiet, premium interface that gets out of the way of your best ideas." },
+];
 
 export default function Home() {
   const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-24">
-          <div className="text-center">
-            <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
-              Welcome to{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-                Think Space
+    <div className="min-h-screen bg-canvas">
+      {/* Nav */}
+      <header className="sticky top-0 z-30 border-b border-hairline bg-canvas/80 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+          <Link to="/" className="flex items-center gap-2">
+            <span className="flex size-7 items-center justify-center rounded-lg bg-ink text-ink-contrast">
+              <Sparkles className="size-4" strokeWidth={2.25} aria-hidden />
+            </span>
+            <span className="text-[15px] font-semibold tracking-tight text-ink">Think Space</span>
+          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeToggle size="sm" />
+            {user ? (
+              <Button as={Link} to="/dashboard" size="sm" iconRight={ArrowRight}>
+                Open app
+              </Button>
+            ) : (
+              <>
+                <Button as={Link} to="/login" variant="ghost" size="sm" className="hidden sm:inline-flex">
+                  Sign in
+                </Button>
+                <Button as={Link} to="/register" size="sm">
+                  Get started
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+
+      {/* Hero */}
+      <section className="mx-auto max-w-3xl px-4 pb-16 pt-20 text-center sm:px-6 sm:pt-28">
+        <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-hairline bg-surface px-3 py-1 text-xs font-medium text-muted">
+          <span className="size-1.5 rounded-full bg-accent" />
+          Collaborative visual workspace
+        </div>
+        <h1 className="text-balance text-4xl font-semibold tracking-tight text-ink sm:text-6xl">
+          Where your team's ideas come together
+        </h1>
+        <p className="mx-auto mt-5 max-w-xl text-pretty text-lg leading-relaxed text-muted">
+          Think Space is a calm, real-time canvas for brainstorming, diagramming and
+          planning — built for teams who care about how their tools feel.
+        </p>
+        <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
+          <Button as={Link} to={user ? "/dashboard" : "/register"} size="lg" iconRight={ArrowRight}>
+            {user ? "Go to your boards" : "Start for free"}
+          </Button>
+          {!user && (
+            <Button as={Link} to="/login" state={{ demo: true }} variant="secondary" size="lg">
+              Try the demo
+            </Button>
+          )}
+        </div>
+
+        {/* Canvas preview motif */}
+        <div className="relative mx-auto mt-16 max-w-3xl">
+          <div className="overflow-hidden rounded-2xl border border-hairline bg-surface shadow-pop">
+            <div className="flex items-center gap-1.5 border-b border-hairline px-4 py-3">
+              <span className="size-2.5 rounded-full bg-line" />
+              <span className="size-2.5 rounded-full bg-line" />
+              <span className="size-2.5 rounded-full bg-line" />
+            </div>
+            <div className="relative h-60 bg-sunken p-6">
+              {[
+                { c: "#fde68a", l: "8%", t: "14%", r: "-6deg" },
+                { c: "#bae6fd", l: "38%", t: "30%", r: "3deg" },
+                { c: "#bbf7d0", l: "64%", t: "12%", r: "-3deg" },
+                { c: "#fbcfe8", l: "20%", t: "55%", r: "4deg" },
+                { c: "#ddd6fe", l: "55%", t: "58%", r: "-2deg" },
+              ].map((n, i) => (
+                <div
+                  key={i}
+                  className="absolute size-24 rounded-xl border border-black/5 shadow-card"
+                  style={{ left: n.l, top: n.t, backgroundColor: n.c, transform: `rotate(${n.r})` }}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features */}
+      <section className="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <div className="mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-semibold tracking-tight text-ink">
+            Everything you need to think together
+          </h2>
+          <p className="mt-3 text-muted">Powerful where it counts, quiet everywhere else.</p>
+        </div>
+        <div className="mt-12 grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-hairline bg-hairline sm:grid-cols-2 lg:grid-cols-3">
+          {FEATURES.map((f) => (
+            <div key={f.title} className="bg-surface p-6">
+              <span className="flex size-10 items-center justify-center rounded-xl border border-hairline bg-canvas text-ink">
+                <f.icon className="size-[18px]" strokeWidth={1.75} aria-hidden />
               </span>
-            </h1>
-            <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Collaborate in real-time, organize your thoughts, and bring your
-              ideas to life. The perfect digital workspace for teams and
-              individuals.
-            </p>
-
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16">
-              {user ? (
-                <Link
-                  to="/boards"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 shadow-lg"
-                >
-                  Go to Your Boards →
-                </Link>
-              ) : (
-                <>
-                  <Link
-                    to="/register"
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 shadow-lg"
-                  >
-                    Get Started Free
-                  </Link>
-                  <Link
-                    to="/login"
-                    className="border border-gray-300 hover:border-gray-400 text-gray-700 px-8 py-4 rounded-lg font-semibold text-lg transition-all hover:bg-gray-50"
-                  >
-                    Sign In
-                  </Link>
-                </>
-              )}
+              <h3 className="mt-4 text-base font-semibold text-ink">{f.title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">{f.text}</p>
             </div>
-
-            {/* Demo/Preview Image Placeholder */}
-            <div className="relative mx-auto max-w-4xl">
-              <div className="bg-white rounded-2xl shadow-2xl border overflow-hidden">
-                <div className="bg-gray-50 px-6 py-4 border-b flex items-center space-x-2">
-                  <div className="w-3 h-3 bg-red-400 rounded-full"></div>
-                  <div className="w-3 h-3 bg-yellow-400 rounded-full"></div>
-                  <div className="w-3 h-3 bg-green-400 rounded-full"></div>
-                  <div className="ml-4 text-sm text-gray-500">
-                    Think Space Board
-                  </div>
-                </div>
-                <div className="p-8 bg-gradient-to-br from-blue-50 to-indigo-50 min-h-64 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="text-6xl mb-4">💡</div>
-                    <p className="text-gray-600 text-lg">
-                      Your collaborative workspace awaits
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          ))}
         </div>
-      </div>
+      </section>
 
-      {/* Features Section */}
-      <div className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Everything you need to collaborate
-            </h2>
-            <p className="text-xl text-gray-600">
-              Powerful features designed for modern teams
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Feature 1 */}
-            <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-blue-50 to-blue-100 hover:shadow-lg transition-all">
-              <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl text-white">⚡</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Real-time Collaboration
-              </h3>
-              <p className="text-gray-600">
-                Work together instantly. See changes as they happen with live
-                cursors and updates.
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-indigo-100 hover:shadow-lg transition-all">
-              <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl text-white">🎨</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Visual Organization
-              </h3>
-              <p className="text-gray-600">
-                Drag, drop, and organize your ideas with intuitive visual tools
-                and sticky notes.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="text-center p-6 rounded-2xl bg-gradient-to-br from-purple-50 to-purple-100 hover:shadow-lg transition-all">
-              <div className="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <span className="text-2xl text-white">👥</span>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                Team Management
-              </h3>
-              <p className="text-gray-600">
-                Add team members, manage permissions, and track who's online
-                and active.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats/Social Proof Section */}
-      <div className="py-16 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid md:grid-cols-3 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold text-blue-600 mb-2">
-                10,000+
-              </div>
-              <div className="text-gray-600">Active Users</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-indigo-600 mb-2">
-                50,000+
-              </div>
-              <div className="text-gray-600">Boards Created</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold text-purple-600 mb-2">1M+</div>
-              <div className="text-gray-600">Ideas Shared</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Footer CTA */}
+      {/* CTA */}
       {!user && (
-        <div className="py-20 bg-gradient-to-r from-blue-600 to-indigo-600">
-          <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
-            <h2 className="text-4xl font-bold text-white mb-4">
-              Ready to start collaborating?
+        <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6">
+          <div className="overflow-hidden rounded-2xl border border-hairline bg-ink px-8 py-14 text-center">
+            <h2 className="text-3xl font-semibold tracking-tight text-ink-contrast">
+              Bring your next idea to life
             </h2>
-            <p className="text-xl text-blue-100 mb-8">
-              Join thousands of teams already using Think Space to bring their
-              ideas to life.
+            <p className="mx-auto mt-3 max-w-md text-ink-contrast/70">
+              Create your first board in seconds. No credit card, no clutter.
             </p>
-            <Link
+            <Button
+              as={Link}
               to="/register"
-              className="bg-white text-blue-600 hover:bg-gray-50 px-8 py-4 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 shadow-lg inline-block"
+              variant="secondary"
+              size="lg"
+              className="mt-7"
+              iconRight={ArrowRight}
             >
-              Start Your Free Account
-            </Link>
+              Create your account
+            </Button>
           </div>
-        </div>
+        </section>
       )}
 
-      {/* Simple Footer */}
-      <footer className="bg-gray-900 text-gray-400 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p>
-            &copy; 2025 Think Space. Made by Farian Bin Rahman.
-          </p>
+      {/* Footer */}
+      <footer className="border-t border-hairline">
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-sm text-muted sm:flex-row sm:px-6">
+          <div className="flex items-center gap-2">
+            <Sparkles className="size-4 text-faint" aria-hidden />
+            <span>Think Space</span>
+          </div>
+          <p>© {new Date().getFullYear()} · Made by Farian Bin Rahman</p>
         </div>
       </footer>
     </div>

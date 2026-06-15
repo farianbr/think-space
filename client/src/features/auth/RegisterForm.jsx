@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { Mail, Lock, User } from "lucide-react";
 import { useAuth } from "../../contexts/authContext";
+import { Button, Input, Field } from "../../components/ui";
 
 export default function RegisterForm({ onSuccess }) {
   const [email, setEmail] = useState("");
@@ -10,56 +12,72 @@ export default function RegisterForm({ onSuccess }) {
   const { register } = useAuth();
 
   const { mutate, isPending, error } = useMutation({
-    mutationFn: ({ email, name, password }) => register({ email, name, password }),
-    onSuccess: (data) => {
-      onSuccess?.(data.user || data);
-    },
+    mutationFn: (payload) => register(payload),
+    onSuccess: (data) => onSuccess?.(data.user || data),
   });
 
-  function handleSubmit(e) {
+  const handleSubmit = (e) => {
     e.preventDefault();
     mutate({ email, name, password });
-  }
+  };
+
+  const weak = password.length > 0 && password.length < 8;
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-2">
-      <input
-        className="rounded border border-gray-300 px-3 py-2 text-base"
-        style={{ fontSize: "16px" }} // Prevent zoom on iOS
-        placeholder="Name"
-        value={name}
-        onChange={(e) => setName(e.target.value)}
-        autoComplete="name"
-      />
-      <input
-        className="rounded border border-gray-300 px-3 py-2 text-base"
-        style={{ fontSize: "16px" }} // Prevent zoom on iOS
-        placeholder="Email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        autoComplete="email"
-      />
-      <input
-        className="rounded border border-gray-300 px-3 py-2 text-base"
-        style={{ fontSize: "16px" }} // Prevent zoom on iOS
-        placeholder="Password"
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        autoComplete="new-password"
-      />
-      {error && (
-        <div className="text-sm text-red-600">
-          {error?.response?.data?.error || "Register failed"}
-        </div>
-      )}
-      <button
-        type="submit"
-        disabled={isPending}
-        className="rounded bg-green-600 px-3 py-2 text-white hover:bg-green-700 disabled:opacity-60"
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <Field label="Name">
+        <Input
+          icon={User}
+          placeholder="Ada Lovelace"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          autoComplete="name"
+          required
+        />
+      </Field>
+      <Field label="Email">
+        <Input
+          icon={Mail}
+          type="email"
+          placeholder="you@company.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
+          required
+        />
+      </Field>
+      <Field
+        label="Password"
+        error={weak ? "Use at least 8 characters" : undefined}
+        hint={!weak ? "At least 8 characters." : undefined}
       >
-        {isPending ? "Creating…" : "Create account"}
-      </button>
+        <Input
+          icon={Lock}
+          type="password"
+          placeholder="••••••••"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+          invalid={weak}
+          required
+        />
+      </Field>
+
+      {error && (
+        <p className="rounded-lg bg-danger-soft px-3 py-2 text-sm text-danger">
+          {error?.response?.data?.error || "Registration failed"}
+        </p>
+      )}
+
+      <Button
+        type="submit"
+        size="lg"
+        loading={isPending}
+        disabled={weak}
+        className="justify-center"
+      >
+        Create account
+      </Button>
     </form>
   );
 }

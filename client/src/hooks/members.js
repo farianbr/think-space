@@ -41,3 +41,31 @@ export function useRemoveBoardMember(boardId) {
     },
   });
 }
+
+// Invite a collaborator by email (with role)
+export function useInviteMember(boardId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ email, role }) => {
+      const res = await api.post(`/boards/${boardId}/members/invite`, { email, role });
+      return res.data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['boardMembers', boardId] });
+    },
+  });
+}
+
+// Change a member's role (owner only)
+export function useUpdateMemberRole(boardId) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ userId, role }) => {
+      const res = await api.patch(`/boards/${boardId}/members/${userId}`, { role });
+      return res.data.member;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['boardMembers', boardId] });
+    },
+  });
+}
