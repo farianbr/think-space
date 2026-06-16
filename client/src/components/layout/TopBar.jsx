@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { Menu, Search, Settings, User, LogOut } from "lucide-react";
+import { Menu, Search, Settings, User, LogOut } from "../../lib/icons";
 import { useAuth } from "../../contexts/authContext";
 import { useCommand } from "../../contexts/commandContext";
 import { setSocketAuthFromStorage } from "../../lib/socket";
@@ -33,15 +33,15 @@ export default function TopBar({ title, onOpenMenu }) {
       <h1 className="truncate text-[15px] font-semibold tracking-tight text-ink">{title}</h1>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Search trigger → command palette */}
+        {/* Search trigger â†’ command palette */}
         <button
           onClick={() => openCommand()}
           className="hidden h-9 items-center gap-2 rounded-lg border border-hairline bg-surface px-3 text-sm text-faint transition-colors hover:border-line hover:text-muted sm:flex"
         >
           <Search className="size-4" strokeWidth={2} aria-hidden />
-          <span className="pr-6">Search…</span>
+          <span className="pr-6">Searchâ€¦</span>
           <kbd className="rounded border border-hairline bg-canvas px-1.5 py-0.5 text-[10px] font-medium text-faint">
-            {isMac ? "⌘" : "Ctrl"} K
+            {isMac ? "âŒ˜" : "Ctrl"} K
           </kbd>
         </button>
         <IconButton

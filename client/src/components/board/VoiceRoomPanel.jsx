@@ -1,4 +1,4 @@
-import { Mic, MicOff, PhoneCall, PhoneOff } from "lucide-react";
+import { Mic, MicOff, PhoneCall, PhoneOff } from "../../lib/icons";
 import { Avatar, Button } from "../ui";
 import { useAuth } from "../../contexts/authContext";
 import { displayName } from "../../lib/format";
@@ -84,12 +84,12 @@ export default function VoiceRoomPanel({ boardId }) {
         </div>
       ) : (
         <Button icon={PhoneCall} onClick={join} loading={joining} className="justify-center">
-          {joining ? "Connecting…" : "Join voice room"}
+          {joining ? "Connectingâ€¦" : "Join voice room"}
         </Button>
       )}
 
       <p className="text-center text-xs text-faint">
-        Peer-to-peer audio · best with a few people on the call.
+        Peer-to-peer audio Â· best with a few people on the call.
       </p>
     </div>
   );

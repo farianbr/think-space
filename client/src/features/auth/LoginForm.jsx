@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { Mail, Lock, ShieldCheck, ArrowLeft } from "lucide-react";
+import { Mail, Lock, ShieldCheck, ArrowLeft } from "../../lib/icons";
 import { useAuth } from "../../contexts/authContext";
 import { Button, Input, Field } from "../../components/ui";
 
@@ -152,7 +152,7 @@ export default function LoginForm({ onSuccess, isDemo }) {
         <Input
           icon={Lock}
           type="password"
-          placeholder="••••••••"
+          placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"

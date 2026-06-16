@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "react-hot-toast";
-import { Mail, Link2, Check, ChevronDown, UserMinus } from "lucide-react";
+import { Mail, Link2, Check, ChevronDown, UserMinus } from "../../lib/icons";
 import { Modal, Button, Input, Avatar, DropdownMenu, IconButton, Badge } from "../ui";
 import {
   useBoardMembers,
@@ -61,7 +61,7 @@ export default function ShareModal({ open, onClose, boardId, board }) {
     ? "owner"
     : members.find((m) => m.userId === user?.id)?.role || null;
   const canManage = isOwner || canManageMembersRole(selfRole);
-  // Roles an admin (non-owner) is allowed to assign — no granting "admin".
+  // Roles an admin (non-owner) is allowed to assign â€” no granting "admin".
   const assignable = isOwner ? ASSIGNABLE_ROLES : ASSIGNABLE_ROLES.filter((r) => r.value !== "admin");
   const canManageRow = (m) =>
     canManage && m.userId !== ownerId && (isOwner || m.role !== "admin");
@@ -77,8 +77,16 @@ export default function ShareModal({ open, onClose, boardId, board }) {
     const value = email.trim();
     if (!value) return toast.error("Enter an email address");
     try {
-      await invite.mutateAsync({ email: value, role });
-      toast.success("Invitation sent");
+      const res = await invite.mutateAsync({ email: value, role });
+      if (res?.pending) {
+        toast.success(
+          res.emailSent
+            ? "Invitation email sent"
+            : "Invite created — email isn't configured, so share the link from the server log."
+        );
+      } else {
+        toast.success("Member added");
+      }
       setEmail("");
     } catch (err) {
       toast.error(err?.response?.data?.message || "Could not invite");
@@ -107,7 +115,7 @@ export default function ShareModal({ open, onClose, boardId, board }) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Invite by email…"
+                placeholder="Invite by emailâ€¦"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -139,7 +147,7 @@ export default function ShareModal({ open, onClose, boardId, board }) {
           </p>
           <div className="max-h-64 space-y-1 overflow-y-auto">
             {isLoading ? (
-              <p className="py-4 text-sm text-muted">Loading members…</p>
+              <p className="py-4 text-sm text-muted">Loading membersâ€¦</p>
             ) : (
               sortedMembers.map((m) => {
                 const isOwnerRow = m.userId === ownerId;

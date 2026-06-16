@@ -1,7 +1,7 @@
-import { Crown, Shield, Pencil, MessageSquare, Eye } from "lucide-react";
+import { Crown, Shield, Pencil, MessageSquare, Eye } from "./icons";
 
 /**
- * Collaborator roles, ordered most → least privileged. "owner" is implicit
+ * Collaborator roles, ordered most â†’ least privileged. "owner" is implicit
  * (board.ownerId) and shown but never assignable. "member" is a legacy alias.
  */
 export const ROLES = [
@@ -21,7 +21,7 @@ export function roleMeta(value) {
 
 export const ASSIGNABLE_ROLES = ROLES.filter((r) => r.assignable);
 
-// Capability checks — mirror server/lib/permissions.js. Keep the two in sync.
+// Capability checks â€” mirror server/lib/permissions.js. Keep the two in sync.
 const RANK = { owner: 5, admin: 4, editor: 3, member: 3, commenter: 2, viewer: 1 };
 const rank = (role) => RANK[role] || 0;
 

@@ -7,14 +7,14 @@ import {
   Network,
   Mic,
   ArrowRight,
-} from "lucide-react";
+} from "../lib/icons";
 import { useAuth } from "../contexts/authContext";
 import { Button, ThemeToggle } from "../components/ui";
 
 const FEATURES = [
-  { icon: Zap, title: "Real-time canvas", text: "Edits, cursors and presence sync the instant they happen — no refresh, no friction." },
+  { icon: Zap, title: "Real-time canvas", text: "Edits, cursors and presence sync the instant they happen â€” no refresh, no friction." },
   { icon: StickyNote, title: "Sticky thinking", text: "Drop notes, arrange ideas, and watch structure emerge on an infinite canvas." },
-  { icon: Users, title: "Made for teams", text: "Invite collaborators with precise roles — admin, editor, commenter or viewer." },
+  { icon: Users, title: "Made for teams", text: "Invite collaborators with precise roles â€” admin, editor, commenter or viewer." },
   { icon: Network, title: "Templates that start you", text: "Brainstorms, roadmaps, retros and mind maps, ready in a single click." },
   { icon: Mic, title: "Voice, soon", text: "Talk it through without leaving the board. Elegant, lightweight voice rooms." },
   { icon: Sparkles, title: "Calm by design", text: "A quiet, premium interface that gets out of the way of your best ideas." },
@@ -65,7 +65,7 @@ export default function Home() {
         </h1>
         <p className="mx-auto mt-5 max-w-xl text-pretty text-lg leading-relaxed text-muted">
           Think Space is a calm, real-time canvas for brainstorming, diagramming and
-          planning — built for teams who care about how their tools feel.
+          planning â€” built for teams who care about how their tools feel.
         </p>
         <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Button as={Link} to={user ? "/dashboard" : "/register"} size="lg" iconRight={ArrowRight}>
@@ -157,7 +157,7 @@ export default function Home() {
             <Sparkles className="size-4 text-faint" aria-hidden />
             <span>Think Space</span>
           </div>
-          <p>© {new Date().getFullYear()} · Made by Farian Bin Rahman</p>
+          <p>Â© {new Date().getFullYear()} Â· Made by Farian Bin Rahman</p>
         </div>
       </footer>
     </div>

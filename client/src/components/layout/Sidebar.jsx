@@ -9,7 +9,7 @@ import {
   Plus,
   Sparkles,
   X,
-} from "lucide-react";
+} from "../../lib/icons";
 import { useMyBoards } from "../../hooks/boards";
 import { Button } from "../ui";
 import { cn } from "../../lib/cn";

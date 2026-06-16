@@ -10,7 +10,7 @@ import {
   Star,
   Users,
   Archive,
-} from "lucide-react";
+} from "../lib/icons";
 
 import { useAuth } from "../contexts/authContext";
 import { useMyBoards } from "../hooks/boards";
@@ -90,7 +90,7 @@ export default function BoardsLibrary() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink">Boards</h1>
           <p className="mt-1 text-sm text-muted">
-            {isLoading ? "Loading…" : `${list.length} board${list.length === 1 ? "" : "s"}`}
+            {isLoading ? "Loadingâ€¦" : `${list.length} board${list.length === 1 ? "" : "s"}`}
           </p>
         </div>
         <Button icon={Plus} onClick={openCreateBoard}>
@@ -127,7 +127,7 @@ export default function BoardsLibrary() {
             icon={Search}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search boards…"
+            placeholder="Search boardsâ€¦"
             className="h-9"
           />
         </div>
@@ -178,7 +178,7 @@ export default function BoardsLibrary() {
           <EmptyState
             icon={Search}
             title="No matches"
-            description={`No boards match “${q}”.`}
+            description={`No boards match â€œ${q}â€.`}
           />
         ) : (
           <EmptyState

@@ -6,6 +6,7 @@ import otplib from "otplib";
 const { authenticator } = otplib;
 import { registerSchema, loginSchema } from "../validation/schemas.js";
 import { findRecoveryCodeMatch } from "../lib/recoveryCodes.js";
+import { applyPendingInvitesForUser } from "./invitesController.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -34,6 +35,9 @@ export async function register(req, res) {
     const user = await prisma.user.create({
       data: { email, name, password: hash },
     });
+
+    // Attach any boards this email was invited to before signing up.
+    await applyPendingInvitesForUser(user);
 
     // issue token on register for better UX
     const token = jwt.sign({ sub: user.id, name: name }, JWT_SECRET, { expiresIn: "7d" });

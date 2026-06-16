@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
-import { Sparkles, Users, Zap, MessageSquare } from "lucide-react";
+import { Sparkles, Users, Zap, MessageSquare } from "../../lib/icons";
 import ThemeToggle from "../ui/ThemeToggle";
 
 const HIGHLIGHTS = [
   { icon: Zap, title: "Real-time canvas", text: "See edits, cursors and presence the instant they happen." },
   { icon: Users, title: "Built for teams", text: "Invite collaborators with the right level of access." },
-  { icon: MessageSquare, title: "Think out loud", text: "Sticky notes, mind maps and voice — soon." },
+  { icon: MessageSquare, title: "Think out loud", text: "Sticky notes, mind maps and voice â€” soon." },
 ];
 
 /**
@@ -43,7 +43,7 @@ export default function AuthShell({ title, subtitle, children, footer }) {
           </div>
         </div>
 
-        <p className="text-xs text-faint">© {new Date().getFullYear()} Think Space</p>
+        <p className="text-xs text-faint">Â© {new Date().getFullYear()} Think Space</p>
       </aside>
 
       {/* Form panel */}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Activity as ActivityIcon, Users, Mic, MessageSquare, X, Circle } from "lucide-react";
+import { Activity as ActivityIcon, Users, Mic, MessageSquare, X, Circle } from "../../lib/icons";
 import { IconButton } from "../ui";
 import ActivityFeed from "../activity/ActivityFeed";
 import ActiveUsers from "../ActiveUsers";

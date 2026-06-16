@@ -8,7 +8,7 @@ import {
   KeyRound,
   Download,
   AlertTriangle,
-} from "lucide-react";
+} from "../../lib/icons";
 
 import { useAuth } from "../../contexts/authContext";
 import {
@@ -37,7 +37,7 @@ function RecoveryCodesPanel({ codes }) {
 
   const download = () => {
     const blob = new Blob(
-      [`Think Space — two-factor recovery codes\n\n${asText}\n`],
+      [`Think Space â€” two-factor recovery codes\n\n${asText}\n`],
       { type: "text/plain" }
     );
     const url = URL.createObjectURL(blob);
@@ -112,7 +112,7 @@ function EnableModal({ open, onClose, setup }) {
     }
   };
 
-  // Phase 2 — two-factor is on; show the one-time recovery codes.
+  // Phase 2 â€” two-factor is on; show the one-time recovery codes.
   if (recoveryCodes) {
     return (
       <Modal open={open} onClose={finish} title="Save your recovery codes" size="md">
@@ -133,7 +133,7 @@ function EnableModal({ open, onClose, setup }) {
     );
   }
 
-  // Phase 1 — scan the QR / enter a code to confirm.
+  // Phase 1 â€” scan the QR / enter a code to confirm.
   return (
     <Modal open={open} onClose={finish} title="Set up two-factor authentication" size="md">
       <form onSubmit={submit} className="space-y-5">
@@ -356,7 +356,7 @@ export default function TwoFactorSettings() {
                 <p className="mt-0.5 text-sm text-muted">
                   {remaining > 0
                     ? `${remaining} unused ${remaining === 1 ? "code" : "codes"} remaining.`
-                    : "No recovery codes left — generate a new set."}
+                    : "No recovery codes left â€” generate a new set."}
                 </p>
                 {(lowCodes || remaining === 0) && (
                   <p
@@ -365,7 +365,7 @@ export default function TwoFactorSettings() {
                     }`}
                   >
                     <AlertTriangle className="size-3" strokeWidth={2} aria-hidden />
-                    {remaining === 0 ? "You can be locked out without codes." : "Running low — consider regenerating."}
+                    {remaining === 0 ? "You can be locked out without codes." : "Running low â€” consider regenerating."}
                   </p>
                 )}
               </div>

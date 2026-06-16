@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Mail, Lock, User } from "lucide-react";
+import { Mail, Lock, User } from "../../lib/icons";
 import { useAuth } from "../../contexts/authContext";
 import { Button, Input, Field } from "../../components/ui";
 
-export default function RegisterForm({ onSuccess }) {
-  const [email, setEmail] = useState("");
+export default function RegisterForm({ onSuccess, initialEmail = "" }) {
+  const [email, setEmail] = useState(initialEmail);
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
 
@@ -54,7 +54,7 @@ export default function RegisterForm({ onSuccess }) {
         <Input
           icon={Lock}
           type="password"
-          placeholder="••••••••"
+          placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"

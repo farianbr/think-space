@@ -11,6 +11,9 @@ import { logActivity } from "../lib/activity.js";
 import { getUserBoardRole } from "../lib/boardAccess.js";
 import { canManageMembers, normalizeRole } from "../lib/permissions.js";
 import { syncUserBoardRole } from "../lib/socketRoles.js";
+import { sendBoardInviteEmail } from "../lib/mailer.js";
+
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
 /**
  * Authorize a member-management action. Returns { board } on success or
@@ -216,11 +219,43 @@ export async function inviteBoardMemberByEmail(req, res) {
     // find user by email
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      // For now, we return 404 and a clear message.
-      // Future: create pending invite record and send email.
-      return res.status(404).json({
-        message:
-          "Email is not registered !",
+      // No account yet: create (or refresh) a pending invite and email a join
+      // link. The membership is created automatically when they register with
+      // this email, or when they open the link while signed in.
+      const actor = await prisma.user.findUnique({
+        where: { id: actorId },
+        select: { name: true, email: true },
+      });
+      const invite = await prisma.invite.upsert({
+        where: { boardId_email: { boardId, email } },
+        update: { role, invitedById: actorId, acceptedAt: null },
+        create: { boardId, email, role, invitedById: actorId },
+      });
+
+      const acceptUrl = `${FRONTEND_URL}/invite/${invite.token}`;
+      const mail = await sendBoardInviteEmail({
+        to: email,
+        inviterName: actor?.name || actor?.email,
+        boardTitle: board.title,
+        role: invite.role,
+        acceptUrl,
+        isNewUser: true,
+      });
+
+      logActivity({
+        boardId,
+        actorId,
+        type: "member.invited",
+        meta: { email, role: invite.role, emailSent: mail.sent },
+      });
+
+      return res.status(201).json({
+        pending: true,
+        invited: true,
+        emailSent: mail.sent,
+        message: mail.sent
+          ? "Invitation email sent"
+          : "Invitation created — email delivery isn't configured, so share the link manually.",
       });
     }
 
@@ -268,6 +303,20 @@ export async function inviteBoardMemberByEmail(req, res) {
 
       syncUserBoardRole(member.userId, boardId, member.role);
       await notifyMemberAdded({ boardId, board, actorId, newMember: member });
+
+      // Existing user: email them a heads-up with a direct link to the board.
+      const actor = await prisma.user.findUnique({
+        where: { id: actorId },
+        select: { name: true, email: true },
+      });
+      sendBoardInviteEmail({
+        to: user.email,
+        inviterName: actor?.name || actor?.email,
+        boardTitle: board.title,
+        role: member.role,
+        acceptUrl: `${FRONTEND_URL}/board/${boardId}`,
+        isNewUser: false,
+      });
 
       return res.status(201).json({ member, message: "Added successfully" });
     } catch (e) {

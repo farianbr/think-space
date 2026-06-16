@@ -6,7 +6,7 @@ import Konva from "konva";
 
 // Cap the canvas pixel ratio on touch/mobile devices. Phones often report a
 // devicePixelRatio of 2-3, which forces Konva to repaint 4-9x as many pixels
-// every pan frame — the main cause of laggy panning. Must be set at module load,
+// every pan frame â€” the main cause of laggy panning. Must be set at module load,
 // before any Stage/Layer canvas is created. Desktop keeps full sharpness.
 if (typeof window !== "undefined") {
   const isTouch = window.innerWidth < 1024 || "ontouchstart" in window;
@@ -28,7 +28,7 @@ import {
   HelpCircle,
   Pencil,
   PanelRightOpen,
-} from "lucide-react";
+} from "../lib/icons";
 
 import { connectSocket, socket } from "../lib/socket";
 import { fetchBoard, fetchNotes } from "../lib/api";
@@ -347,7 +347,7 @@ export default function BoardPage() {
     function onRoleChanged(p) {
       if (!p || p.boardId !== boardId) return;
       setRole(p.role || null);
-      toast(`Your role is now ${roleMeta(p.role).label}`, { icon: "🔑" });
+      toast(`Your role is now ${roleMeta(p.role).label}`, { icon: "ðŸ”‘" });
     }
     function onAccessRevoked(p) {
       if (!p || p.boardId !== boardId) return;
@@ -539,7 +539,7 @@ export default function BoardPage() {
       <div className="flex h-screen items-center justify-center bg-canvas">
         <div className="text-center">
           <div className="mx-auto mb-4 size-8 animate-spin rounded-full border-2 border-line border-t-ink" />
-          <p className="text-sm text-muted">Loading board…</p>
+          <p className="text-sm text-muted">Loading boardâ€¦</p>
         </div>
       </div>
     );
@@ -596,7 +596,7 @@ export default function BoardPage() {
           title={isOwner ? "Rename board" : undefined}
         >
           <span className="truncate text-[15px] font-semibold tracking-tight text-ink">
-            {board?.title || "Loading…"}
+            {board?.title || "Loadingâ€¦"}
           </span>
           {isOwner && (
             <Pencil className="size-3.5 shrink-0 text-faint opacity-0 transition-opacity group-hover:opacity-100" />
@@ -650,12 +650,12 @@ export default function BoardPage() {
       {/* Body */}
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <div ref={containerRef} className="relative min-w-0 flex-1 bg-canvas">
-          {/* Floating contextual toolbar — add note + color swatches.
+          {/* Floating contextual toolbar â€” add note + color swatches.
               Hidden for viewers/commenters who can't create notes. */}
           {canEdit && (
             <div className="absolute left-4 top-1/2 z-10 -translate-y-1/2 lg:block">
               <div className="flex flex-col items-center gap-3 rounded-2xl border border-hairline bg-surface p-2 shadow-card">
-                <Tooltip label={joined ? "Add note" : "Connecting…"} side="right">
+                <Tooltip label={joined ? "Add note" : "Connectingâ€¦"} side="right">
                   <button
                     onClick={addNoteAtCenter}
                     disabled={!joined}
@@ -687,7 +687,7 @@ export default function BoardPage() {
           {/* Read-only banner for viewers / commenters */}
           {joined && !canEdit && (
             <div className="pointer-events-none absolute left-1/2 top-4 z-10 -translate-x-1/2 rounded-full border border-hairline bg-surface/90 px-3 py-1.5 text-xs font-medium text-muted shadow-soft backdrop-blur-sm">
-              {roleMeta(role).label} access · view only
+              {roleMeta(role).label} access Â· view only
             </div>
           )}
 
@@ -816,10 +816,10 @@ export default function BoardPage() {
 
           {/* Controls hint (desktop) */}
           <div className="pointer-events-none absolute bottom-4 left-4 z-10 hidden rounded-xl border border-hairline bg-surface/90 px-3 py-2 text-xs text-muted shadow-soft backdrop-blur-sm lg:block">
-            <span className="font-medium text-ink-soft">Scroll</span> to zoom ·{" "}
-            <span className="font-medium text-ink-soft">Drag</span> to pan ·{" "}
-            <span className="font-medium text-ink-soft">Double-click</span> to edit ·{" "}
-            <span className="font-medium text-ink-soft">Del</span> to remove ·{" "}
+            <span className="font-medium text-ink-soft">Scroll</span> to zoom Â·{" "}
+            <span className="font-medium text-ink-soft">Drag</span> to pan Â·{" "}
+            <span className="font-medium text-ink-soft">Double-click</span> to edit Â·{" "}
+            <span className="font-medium text-ink-soft">Del</span> to remove Â·{" "}
             <span className="font-medium text-ink-soft">Ctrl+D</span> to duplicate
           </div>
         </div>

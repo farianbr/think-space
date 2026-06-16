@@ -1,4 +1,4 @@
-import { Hand, StickyNote, MousePointerClick } from "lucide-react";
+import { Hand, StickyNote, MousePointerClick } from "../lib/icons";
 import { Modal, Button } from "./ui";
 
 const GROUPS = [

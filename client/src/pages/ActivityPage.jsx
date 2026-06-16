@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Activity as ActivityIcon, ChevronDown } from "lucide-react";
+import { Activity as ActivityIcon, ChevronDown } from "../lib/icons";
 
 import { useWorkspaceActivity } from "../hooks/activity";
 import { Avatar, DropdownMenu, Button, EmptyState, Skeleton, Card } from "../components/ui";

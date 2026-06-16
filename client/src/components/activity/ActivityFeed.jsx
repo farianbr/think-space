@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Activity as ActivityIcon } from "lucide-react";
+import { Activity as ActivityIcon } from "../../lib/icons";
 import { describeActivity } from "../../lib/activityText";
 import { timeAgo } from "../../lib/format";
 import { Avatar, EmptyState, Skeleton } from "../ui";

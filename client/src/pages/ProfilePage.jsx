@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
-import { Settings, FolderOpen, Users, Star, CalendarDays } from "lucide-react";
+import { Settings, FolderOpen, Users, Star, CalendarDays } from "../lib/icons";
 
 import { useAuth } from "../contexts/authContext";
 import { useMyBoards } from "../hooks/boards";
@@ -66,9 +66,9 @@ export default function ProfilePage() {
 
       {/* Stats */}
       <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <Stat icon={FolderOpen} value={boardsLoading ? "—" : boards.length} label="Boards" />
-        <Stat icon={FolderOpen} value={boardsLoading ? "—" : owned} label="Owned" />
-        <Stat icon={Star} value={boardsLoading ? "—" : starred} label="Starred" />
+        <Stat icon={FolderOpen} value={boardsLoading ? "â€”" : boards.length} label="Boards" />
+        <Stat icon={FolderOpen} value={boardsLoading ? "â€”" : owned} label="Owned" />
+        <Stat icon={Star} value={boardsLoading ? "â€”" : starred} label="Starred" />
         <Stat icon={Users} value={people.length} label="Collaborators" />
       </div>
 
@@ -108,7 +108,7 @@ export default function ProfilePage() {
                             {a.board.title}
                           </Link>
                         )}
-                        {a.board && " · "}
+                        {a.board && " Â· "}
                         {timeAgo(a.createdAt)}
                       </p>
                     </div>

@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Compass } from "lucide-react";
+import { Compass } from "../lib/icons";
 import { Button } from "../components/ui";
 
 export default function NotFound() {

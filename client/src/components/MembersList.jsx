@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "react-hot-toast";
-import { Crown, UserMinus, Users } from "lucide-react";
+import { Crown, UserMinus, Users } from "../lib/icons";
 
 import { useBoardMembers, useRemoveBoardMember } from "../hooks/members";
 import { useAuth } from "../contexts/authContext";

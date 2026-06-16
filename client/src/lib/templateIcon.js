@@ -7,7 +7,7 @@ import {
   Target,
   Network,
   LayoutTemplate,
-} from "lucide-react";
+} from "./icons";
 
 // Maps a template's `thumbnail` icon-name to a lucide component.
 const ICONS = { Lightbulb, Map, Microscope, Footprints, RefreshCw, Target, Network };

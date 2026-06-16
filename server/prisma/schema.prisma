@@ -28,9 +28,31 @@ model Board {
   stars      BoardStar[]
   activities Activity[]
   comments   Comment[]
+  invites    Invite[]
 
   @@index([ownerId])
   @@index([isArchived])
+}
+
+// Pending invitation to a board for an email that has no account yet (or an
+// existing user who hasn't accepted). Consumed when the invitee registers with
+// the matching email or opens the tokenized accept link while signed in.
+model Invite {
+  id          String    @id @default(cuid())
+  boardId     String
+  email       String
+  role        String    @default("editor")
+  token       String    @unique @default(cuid())
+  invitedById String?
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?
+  acceptedAt  DateTime?
+
+  board     Board @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  invitedBy User? @relation("InviteInvitedBy", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([boardId, email])
+  @@index([email])
 }
 
 model Note {
@@ -116,6 +138,7 @@ model User {
   activities    Activity[]
   comments      Comment[]
   reactions     Reaction[]
+  sentInvites   Invite[]       @relation("InviteInvitedBy")
 }
 
 model BoardMember {

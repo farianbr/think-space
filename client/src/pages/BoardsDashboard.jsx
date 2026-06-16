@@ -9,7 +9,7 @@ import {
   Users,
   Sparkles,
   FolderOpen,
-} from "lucide-react";
+} from "../lib/icons";
 
 import { connectSocket } from "../lib/socket";
 import { useAuth } from "../contexts/authContext";
@@ -115,7 +115,7 @@ export default function BoardsDashboard() {
           <EmptyState
             icon={Sparkles}
             title="Your canvas is empty"
-            description="Create your first board or start from a template — your ideas deserve room to breathe."
+            description="Create your first board or start from a template â€” your ideas deserve room to breathe."
             action={
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <Button icon={Plus} onClick={openCreateBoard}>

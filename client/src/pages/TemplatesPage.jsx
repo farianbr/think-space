@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { LayoutTemplate } from "lucide-react";
+import { LayoutTemplate } from "../lib/icons";
 
 import { useTemplates, useUseTemplate } from "../hooks/templates";
 import TemplateCard from "../components/templates/TemplateCard";

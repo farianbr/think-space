@@ -1,9 +1,9 @@
-import { ArrowRight } from "lucide-react";
+import { ArrowRight } from "../../lib/icons";
 import { Card, Button, Badge } from "../ui";
 import { templateIcon } from "../../lib/templateIcon";
 
 /**
- * App Store–style editorial template card.
+ * App Storeâ€“style editorial template card.
  */
 export default function TemplateCard({ template, onUse, loading }) {
   const Icon = templateIcon(template.thumbnail);

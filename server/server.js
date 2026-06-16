@@ -13,6 +13,7 @@ import activityRouter from "./routes/activityRoutes.js";
 import notificationsRouter from "./routes/notificationsRoutes.js";
 import templatesRouter from "./routes/templatesRoutes.js";
 import peopleRouter from "./routes/peopleRoutes.js";
+import invitesRouter from "./routes/invitesRoutes.js";
 import billingRouter from "./routes/billingRoutes.js";
 import { handleStripeWebhook } from "./controllers/billingController.js";
 import { socketAuth } from "./middleware/socketAuth.js";
@@ -76,6 +77,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/boards", boardsRouter);
 app.use("/api/boards", boardMembersRouter);
 app.use("/api/notifications", notificationsRouter);
+app.use("/api/invites", invitesRouter);
 app.use("/api/templates", templatesRouter);
 app.use("/api/billing", billingRouter);
 

@@ -16,7 +16,7 @@ import {
   Users,
   Activity,
   User,
-} from "lucide-react";
+} from "../../lib/icons";
 import { useMyBoards } from "../../hooks/boards";
 import { useTemplates, useUseTemplate } from "../../hooks/templates";
 import { useTheme } from "../../contexts/themeContext";
@@ -85,7 +85,7 @@ export default function CommandPalette({ open, onClose, onCreateBoard }) {
       id: `tpl-${t.slug}`,
       group: "Templates",
       icon: Sparkles,
-      label: `Use “${t.title}” template`,
+      label: `Use â€œ${t.title}â€ template`,
       sublabel: t.category,
       keywords: `${t.title} ${t.category} template`,
       run: async () => {
@@ -166,7 +166,7 @@ export default function CommandPalette({ open, onClose, onCreateBoard }) {
               setActive(0);
             }}
             onKeyDown={onKeyDown}
-            placeholder="Search boards, templates, or run a command…"
+            placeholder="Search boards, templates, or run a commandâ€¦"
             className="h-14 w-full bg-transparent text-[15px] text-ink placeholder:text-faint focus:outline-none"
             style={{ fontSize: "16px" }}
           />
@@ -178,7 +178,7 @@ export default function CommandPalette({ open, onClose, onCreateBoard }) {
         <div ref={listRef} className="max-h-[52vh] overflow-y-auto p-2">
           {items.length === 0 ? (
             <div className="px-3 py-10 text-center text-sm text-muted">
-              No results for “{query}”
+              No results for â€œ{query}â€
             </div>
           ) : (
             groups.map((g) => (

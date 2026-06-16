@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { toast } from "react-hot-toast";
-import { Send, Trash2, MessageSquare } from "lucide-react";
+import { Send, Trash2, MessageSquare } from "../../lib/icons";
 
 import { socket } from "../../lib/socket";
 import { useAuth } from "../../contexts/authContext";
@@ -9,7 +9,7 @@ import { displayName, timeAgo } from "../../lib/format";
 import { cn } from "../../lib/cn";
 
 // Must match server/controllers/commentsController.js ALLOWED_EMOJI.
-const REACTION_EMOJI = ["👍", "❤️", "🎉", "🔥", "👀", "✅"];
+const REACTION_EMOJI = ["ðŸ‘", "â¤ï¸", "ðŸŽ‰", "ðŸ”¥", "ðŸ‘€", "âœ…"];
 
 /**
  * Comments + reactions for a single note. Loads via the `comment:list` socket
@@ -193,7 +193,7 @@ export default function CommentThread({ boardId, note, canComment, canManage }) 
               if (e.key === "Enter" && !e.shiftKey) submit(e);
             }}
             rows={1}
-            placeholder="Add a comment…"
+            placeholder="Add a commentâ€¦"
             className="max-h-28 min-h-[40px] flex-1 resize-none rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-accent/40"
           />
           <IconButton icon={Send} label="Send" type="submit" variant="ink" disabled={!text.trim() || sending} />

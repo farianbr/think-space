@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Mail, ArrowLeft, MailCheck } from "lucide-react";
+import { Mail, ArrowLeft, MailCheck } from "../lib/icons";
 import AuthShell from "../components/auth/AuthShell";
 import { Button, Input, Field } from "../components/ui";
 
@@ -16,7 +16,7 @@ export default function ForgotPasswordPage() {
   const submit = (e) => {
     e.preventDefault();
     setSubmitting(true);
-    // No email backend yet — acknowledge without leaking whether the account exists.
+    // No email backend yet â€” acknowledge without leaking whether the account exists.
     setTimeout(() => {
       setSubmitting(false);
       setSent(true);
