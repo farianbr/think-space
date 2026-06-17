@@ -39,7 +39,7 @@ export default function CommandPalette({ open, onClose, onCreateBoard }) {
   const navigate = useNavigate();
   const inputRef = useRef(null);
   const listRef = useRef(null);
-  const { cycleTheme } = useTheme();
+  const { resolved, setTheme } = useTheme();
   const { data: boards = [] } = useMyBoards("all");
   const { data: templates = [] } = useTemplates();
   const useTemplate = useUseTemplate();
@@ -68,7 +68,15 @@ export default function CommandPalette({ open, onClose, onCreateBoard }) {
       { id: "activity", group: "Navigate", icon: Activity, label: "Open Activity", keywords: "feed history", run: () => go("/activity") },
       { id: "profile", group: "Navigate", icon: User, label: "Open Profile", keywords: "account me", run: () => go("/profile") },
       { id: "settings", group: "Navigate", icon: Settings, label: "Open Settings", run: () => go("/settings") },
-      { id: "theme", group: "Actions", icon: SunMoon, label: "Toggle theme", run: () => { cycleTheme(); } },
+      {
+        id: "theme",
+        group: "Actions",
+        icon: SunMoon,
+        label: "Toggle theme",
+        run: () => {
+          setTheme(resolved === "dark" ? "light" : "dark");
+        },
+      },
     ];
 
     const boardItems = boards.slice(0, 50).map((b) => ({
@@ -103,7 +111,7 @@ export default function CommandPalette({ open, onClose, onCreateBoard }) {
     return [...actions, ...boardItems, ...templateItems].filter(
       (it) => matches(query, `${it.label} ${it.keywords || ""}`)
     );
-  }, [boards, templates, query]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [boards, templates, query, resolved, setTheme]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Group while preserving order
   const groups = useMemo(() => {

@@ -1,3 +1,4 @@
+import Tooltip from "./Tooltip";
 import { cn } from "../../lib/cn";
 
 // Deterministic warm palette so a given user keeps the same avatar color.
@@ -48,9 +49,8 @@ export default function Avatar({
   const color = PALETTE[hashString(u.email || u.name || "") % PALETTE.length];
   const label = title ?? u.name ?? u.email;
 
-  return (
+  const avatar = (
     <span
-      title={label}
       className={cn(
         "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold uppercase",
         ring && "ring-2 ring-surface",
@@ -65,6 +65,14 @@ export default function Avatar({
         initialsFor(u)
       )}
     </span>
+  );
+
+  return label ? (
+    <Tooltip label={label} side="bottom" className="normal-case">
+      {avatar}
+    </Tooltip>
+  ) : (
+    avatar
   );
 }
 

@@ -1,5 +1,6 @@
 import { forwardRef } from "react";
 import { cn } from "../../lib/cn";
+import { TooltipBubble } from "./Tooltip";
 
 const VARIANTS = {
   ghost:
@@ -15,21 +16,37 @@ const SIZES = {
   lg: "size-10 rounded-lg [&_svg]:size-5",
 };
 
-/** Square icon-only button. Always pass an accessible `label`. */
+/**
+ * Square icon-only button. Always pass an accessible `label` — it doubles as
+ * the styled hover tooltip (set `tooltip={false}` to opt out, or `tooltipSide`
+ * to reposition).
+ */
 const IconButton = forwardRef(function IconButton(
-  { icon: Icon, label, variant = "ghost", size = "md", className, ...props },
+  {
+    icon: Icon,
+    label,
+    variant = "ghost",
+    size = "md",
+    tooltip = true,
+    tooltipSide = "bottom",
+    className,
+    ...props
+  },
   ref
 ) {
+  const showTip = Boolean(label && tooltip);
   return (
     <button
       ref={ref}
       type="button"
       aria-label={label}
-      title={label}
       className={cn(
         "inline-flex items-center justify-center transition-colors duration-150 ease-out",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent",
         "active:scale-95 disabled:pointer-events-none",
+        // Tooltip lives inside the button so responsive/layout classes on the
+        // button (e.g. `sm:hidden`) keep working without an extra wrapper box.
+        showTip && "group/tt relative",
         VARIANTS[variant],
         SIZES[size],
         className
@@ -37,6 +54,7 @@ const IconButton = forwardRef(function IconButton(
       {...props}
     >
       {Icon && <Icon strokeWidth={2} aria-hidden />}
+      {showTip && <TooltipBubble label={label} side={tooltipSide} />}
     </button>
   );
 });

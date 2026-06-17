@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Activity as ActivityIcon, Users, Mic, MessageSquare, X, Circle } from "../../lib/icons";
-import { IconButton } from "../ui";
+import { IconButton, Tooltip } from "../ui";
 import ActivityFeed from "../activity/ActivityFeed";
 import ActiveUsers from "../ActiveUsers";
 import MembersList from "../MembersList";
@@ -38,27 +38,38 @@ export default function BoardPanel({
 
   return (
     <div className="flex h-full w-full flex-col bg-surface sm:w-96">
-      <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
-        <div className="flex items-center gap-1">
+      <div className="flex items-center justify-between gap-2 border-b border-hairline px-4 py-3">
+        <div className="flex min-w-0 items-center gap-1">
           {TABS.map((t) => {
             const Icon = t.icon;
             const active = tab === t.id;
-            return (
+            const button = (
               <button
-                key={t.id}
                 onClick={() => setTab(t.id)}
+                aria-label={t.label}
+                aria-current={active ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors",
                   active ? "bg-sunken text-ink" : "text-muted hover:text-ink"
                 )}
               >
-                <Icon className="size-4" strokeWidth={2} aria-hidden />
-                {t.label}
+                <Icon className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+                <span className={cn(!active && "sr-only")}>{t.label}</span>
               </button>
+            );
+            // Active tab shows its label inline; collapsed tabs get a tooltip.
+            return active ? (
+              <span key={t.id} className="inline-flex">
+                {button}
+              </span>
+            ) : (
+              <Tooltip key={t.id} label={t.label} side="bottom">
+                {button}
+              </Tooltip>
             );
           })}
         </div>
-        <IconButton icon={X} label="Close panel" size="sm" onClick={onClose} />
+        <IconButton icon={X} label="Close panel" size="sm" onClick={onClose} className="shrink-0" />
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">

@@ -15,3 +15,4 @@ export { default as Switch } from "./Switch";
 export { default as Tooltip } from "./Tooltip";
 export { default as DropdownMenu } from "./DropdownMenu";
 export { default as ThemeToggle } from "./ThemeToggle";
+export { default as Logo } from "./Logo";

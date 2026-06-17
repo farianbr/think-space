@@ -22,6 +22,14 @@ function resolveTheme(theme) {
   return theme;
 }
 
+function persistTheme(next) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, next);
+  } catch {
+    /* ignore persistence errors (private mode, etc.) */
+  }
+}
+
 /**
  * Owns theme preference, persists it, reacts to OS changes when on "system",
  * and toggles the `.dark` class on <html>. The inline script in index.html
@@ -55,16 +63,19 @@ export function ThemeProvider({ children }) {
   const setTheme = useCallback((next) => {
     if (!THEMES.includes(next)) return;
     setThemeState(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      /* ignore persistence errors (private mode, etc.) */
-    }
+    persistTheme(next);
   }, []);
 
+  // Functional update so the callback never closes over a stale `theme`.
+  // (CommandPalette memoizes its action list and would otherwise keep calling
+  // an outdated cycleTheme, making the toggle appear to work only once.)
   const cycleTheme = useCallback(() => {
-    setTheme(THEMES[(THEMES.indexOf(theme) + 1) % THEMES.length]);
-  }, [theme, setTheme]);
+    setThemeState((cur) => {
+      const next = THEMES[(THEMES.indexOf(cur) + 1) % THEMES.length];
+      persistTheme(next);
+      return next;
+    });
+  }, []);
 
   const value = useMemo(
     () => ({ theme, resolved, setTheme, cycleTheme }),

@@ -7,11 +7,10 @@ import {
   Users,
   Activity,
   Plus,
-  Sparkles,
   X,
 } from "../../lib/icons";
 import { useMyBoards } from "../../hooks/boards";
-import { Button } from "../ui";
+import { Button, Logo } from "../ui";
 import { cn } from "../../lib/cn";
 
 const NAV = [
@@ -55,7 +54,7 @@ export default function Sidebar({ onNavigate, onNewBoard }) {
       <div className="flex items-center justify-between px-2 pb-2">
         <NavLink to="/dashboard" onClick={onNavigate} className="flex items-center gap-2">
           <span className="flex size-7 items-center justify-center rounded-lg bg-ink text-ink-contrast">
-            <Sparkles className="size-4" strokeWidth={2.25} aria-hidden />
+            <Logo className="size-[18px]" />
           </span>
           <span className="text-[15px] font-semibold tracking-tight text-ink">Think Space</span>
         </NavLink>

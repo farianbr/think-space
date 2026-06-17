@@ -584,7 +584,7 @@ export default function BoardPage() {
     <div className="flex h-screen flex-col overflow-hidden bg-canvas">
       {/* Top bar */}
       <header className="z-20 flex h-14 shrink-0 items-center gap-2 border-b border-hairline bg-surface/90 px-3 backdrop-blur-md sm:px-4">
-        <IconButton icon={ArrowLeft} label="Back to boards" onClick={() => navigate("/dashboard")} />
+        <IconButton icon={ArrowLeft} label="Back to boards" tooltipSide="bottom-start" onClick={() => navigate("/dashboard")} />
 
         <button
           onClick={() => isOwner && setShowRename(true)}
@@ -613,22 +613,19 @@ export default function BoardPage() {
             </span>
           </div>
 
-          <Tooltip label="Export as PNG">
-            <IconButton icon={Download} label="Export as PNG" onClick={handleExport} />
-          </Tooltip>
+          <IconButton icon={Download} label="Export as PNG" onClick={handleExport} />
 
-          <Tooltip label="Voice room">
-            <IconButton
-              icon={Mic}
-              label="Voice room"
-              onClick={() => setPanel((p) => (p === "voice" ? null : "voice"))}
-              className={cn(panel === "voice" && "bg-sunken text-ink")}
-            />
-          </Tooltip>
+          <IconButton
+            icon={Mic}
+            label="Voice room"
+            onClick={() => setPanel((p) => (p === "voice" ? null : "voice"))}
+            className={cn(panel === "voice" && "bg-sunken text-ink")}
+          />
 
           <IconButton
             icon={PanelRightOpen}
             label="Activity & members"
+            tooltipSide="bottom-end"
             onClick={() => setPanel((p) => (p ? null : "activity"))}
             className={cn(panel && panel !== "voice" && "bg-sunken text-ink")}
           />
@@ -641,6 +638,7 @@ export default function BoardPage() {
           <IconButton
             icon={HelpCircle}
             label="Help"
+            tooltipSide="bottom-end"
             onClick={() => setShowMobileHelpModal(true)}
             className="lg:hidden"
           />
@@ -807,11 +805,11 @@ export default function BoardPage() {
 
           {/* Floating zoom controls (bottom-right) */}
           <div className="absolute bottom-4 right-4 z-10 flex items-center rounded-xl border border-hairline bg-surface p-1 shadow-card">
-            <IconButton icon={ZoomOut} label="Zoom out" size="sm" onClick={handleZoomOut} />
+            <IconButton icon={ZoomOut} label="Zoom out" size="sm" tooltipSide="top" onClick={handleZoomOut} />
             <span className="w-12 text-center text-xs font-medium text-muted">{Math.round(scale * 100)}%</span>
-            <IconButton icon={ZoomIn} label="Zoom in" size="sm" onClick={handleZoomIn} />
+            <IconButton icon={ZoomIn} label="Zoom in" size="sm" tooltipSide="top" onClick={handleZoomIn} />
             <span className="mx-0.5 h-5 w-px bg-hairline" />
-            <IconButton icon={RotateCcw} label="Reset view" size="sm" onClick={handleResetZoom} />
+            <IconButton icon={RotateCcw} label="Reset view" size="sm" tooltipSide="top-end" onClick={handleResetZoom} />
           </div>
 
           {/* Controls hint (desktop) */}

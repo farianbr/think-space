@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { Sparkles, Users, Zap, MessageSquare } from "../../lib/icons";
+import { Users, Zap, MessageSquare } from "../../lib/icons";
+import { Logo } from "../ui";
 import ThemeToggle from "../ui/ThemeToggle";
 
 const HIGHLIGHTS = [
@@ -19,7 +20,7 @@ export default function AuthShell({ title, subtitle, children, footer }) {
       <aside className="relative hidden w-[44%] flex-col justify-between overflow-hidden border-r border-hairline bg-surface p-12 lg:flex">
         <Link to="/" className="flex items-center gap-2">
           <span className="flex size-8 items-center justify-center rounded-lg bg-ink text-ink-contrast">
-            <Sparkles className="size-[18px]" strokeWidth={2.25} aria-hidden />
+            <Logo className="size-5" />
           </span>
           <span className="text-base font-semibold tracking-tight text-ink">Think Space</span>
         </Link>
@@ -51,7 +52,7 @@ export default function AuthShell({ title, subtitle, children, footer }) {
         <div className="flex items-center justify-between p-5">
           <Link to="/" className="flex items-center gap-2 lg:invisible">
             <span className="flex size-7 items-center justify-center rounded-lg bg-ink text-ink-contrast">
-              <Sparkles className="size-4" strokeWidth={2.25} aria-hidden />
+              <Logo className="size-[18px]" />
             </span>
             <span className="text-[15px] font-semibold tracking-tight text-ink">Think Space</span>
           </Link>

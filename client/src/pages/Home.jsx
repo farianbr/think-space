@@ -9,7 +9,7 @@ import {
   ArrowRight,
 } from "../lib/icons";
 import { useAuth } from "../contexts/authContext";
-import { Button, ThemeToggle } from "../components/ui";
+import { Button, ThemeToggle, Logo } from "../components/ui";
 
 const FEATURES = [
   { icon: Zap, title: "Real-time canvas", text: "Edits, cursors and presence sync the instant they happen — no refresh, no friction." },
@@ -30,7 +30,7 @@ export default function Home() {
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link to="/" className="flex items-center gap-2">
             <span className="flex size-7 items-center justify-center rounded-lg bg-ink text-ink-contrast">
-              <Sparkles className="size-4" strokeWidth={2.25} aria-hidden />
+              <Logo className="size-[18px]" />
             </span>
             <span className="text-[15px] font-semibold tracking-tight text-ink">Think Space</span>
           </Link>
@@ -153,8 +153,8 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-hairline">
         <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 text-sm text-muted sm:flex-row sm:px-6">
-          <div className="flex items-center gap-2">
-            <Sparkles className="size-4 text-faint" aria-hidden />
+          <div className="flex items-center gap-2 text-faint">
+            <Logo className="size-4" notch="var(--color-canvas)" />
             <span>Think Space</span>
           </div>
           <p>© {new Date().getFullYear()} · Made by Farian Bin Rahman</p>

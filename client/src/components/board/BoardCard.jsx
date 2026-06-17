@@ -10,7 +10,7 @@ import {
   Users,
   Crown,
 } from "../../lib/icons";
-import { Card, AvatarGroup, DropdownMenu, IconButton } from "../ui";
+import { Card, AvatarGroup, DropdownMenu, IconButton, Tooltip } from "../ui";
 import { timeAgo } from "../../lib/format";
 import { cn } from "../../lib/cn";
 
@@ -99,22 +99,23 @@ export default function BoardCard({
   const collaborators = [board.owner, ...members].filter(Boolean);
 
   const StarBtn = (
-    <button
-      onClick={(e) => {
-        e.preventDefault();
-        onToggleStar?.(board);
-      }}
-      className={cn(
-        "rounded-md p-1.5 transition-colors",
-        board.isStarred
-          ? "text-accent"
-          : "text-faint opacity-0 hover:text-muted group-hover:opacity-100"
-      )}
-      aria-label={board.isStarred ? "Unstar board" : "Star board"}
-      title={board.isStarred ? "Unstar" : "Star"}
-    >
-      <Star className="size-4" fill={board.isStarred ? "currentColor" : "none"} strokeWidth={2} />
-    </button>
+    <Tooltip label={board.isStarred ? "Unstar" : "Star"} side="bottom">
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          onToggleStar?.(board);
+        }}
+        className={cn(
+          "rounded-md p-1.5 transition-colors",
+          board.isStarred
+            ? "text-accent"
+            : "text-faint opacity-0 hover:text-muted group-hover:opacity-100"
+        )}
+        aria-label={board.isStarred ? "Unstar board" : "Star board"}
+      >
+        <Star className="size-4" fill={board.isStarred ? "currentColor" : "none"} strokeWidth={2} />
+      </button>
+    </Tooltip>
   );
 
   if (view === "list") {

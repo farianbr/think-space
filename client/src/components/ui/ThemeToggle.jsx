@@ -1,5 +1,6 @@
 import { Monitor, Moon, Sun } from "../../lib/icons";
 import { useTheme } from "../../contexts/themeContext";
+import Tooltip from "./Tooltip";
 import { cn } from "../../lib/cn";
 
 const OPTIONS = [
@@ -27,22 +28,23 @@ export default function ThemeToggle({ className, size = "md" }) {
       {OPTIONS.map(({ value, icon: Icon, label }) => {
         const active = theme === value;
         return (
-          <button
-            key={value}
-            role="radio"
-            aria-checked={active}
-            title={label}
-            onClick={() => setTheme(value)}
-            className={cn(
-              "inline-flex items-center justify-center rounded-full transition-colors duration-150",
-              dim,
-              active
-                ? "bg-surface text-ink shadow-soft"
-                : "text-faint hover:text-muted"
-            )}
-          >
-            <Icon strokeWidth={2} aria-hidden />
-          </button>
+          <Tooltip key={value} label={label} side="bottom">
+            <button
+              role="radio"
+              aria-checked={active}
+              aria-label={label}
+              onClick={() => setTheme(value)}
+              className={cn(
+                "inline-flex items-center justify-center rounded-full transition-colors duration-150",
+                dim,
+                active
+                  ? "bg-surface text-ink shadow-soft"
+                  : "text-faint hover:text-muted"
+              )}
+            >
+              <Icon strokeWidth={2} aria-hidden />
+            </button>
+          </Tooltip>
         );
       })}
     </div>

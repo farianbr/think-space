@@ -1,3 +1,4 @@
+import Tooltip from "./Tooltip";
 import { cn } from "../../lib/cn";
 
 /**
@@ -17,12 +18,15 @@ export default function Segmented({ value, onChange, options, className, size = 
       {options.map((opt) => {
         const active = opt.value === value;
         const Icon = opt.icon;
-        return (
+        // Tooltip when there's an explicit title, or for icon-only segments
+        // (a visible label needs no hover hint).
+        const tip = opt.title || opt.label;
+        const showTip = Boolean(opt.title || !opt.label);
+        const button = (
           <button
-            key={opt.value}
             role="tab"
             aria-selected={active}
-            title={opt.title || opt.label}
+            aria-label={tip}
             onClick={() => onChange(opt.value)}
             className={cn(
               "inline-flex items-center justify-center gap-1.5 rounded-[7px] px-2.5 text-sm font-medium transition-colors duration-150",
@@ -35,6 +39,15 @@ export default function Segmented({ value, onChange, options, className, size = 
             {Icon && <Icon className="size-4" strokeWidth={2} aria-hidden />}
             {opt.label && <span>{opt.label}</span>}
           </button>
+        );
+        return showTip && tip ? (
+          <Tooltip key={opt.value} label={tip} side="bottom">
+            {button}
+          </Tooltip>
+        ) : (
+          <span key={opt.value} className="inline-flex">
+            {button}
+          </span>
         );
       })}
     </div>
