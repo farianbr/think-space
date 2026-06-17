@@ -71,6 +71,7 @@ export default function MembersList({ boardId, boardOwnerId }) {
                   icon={UserMinus}
                   label="Remove member"
                   size="sm"
+                  tooltipSide="bottom-end"
                   className="opacity-0 group-hover:opacity-100"
                   onClick={() => setConfirming(m)}
                 />

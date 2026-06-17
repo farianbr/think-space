@@ -69,7 +69,14 @@ export default function BoardPanel({
             );
           })}
         </div>
-        <IconButton icon={X} label="Close panel" size="sm" onClick={onClose} className="shrink-0" />
+        <IconButton
+          icon={X}
+          label="Close panel"
+          size="sm"
+          tooltipSide="bottom-end"
+          onClick={onClose}
+          className="shrink-0"
+        />
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">

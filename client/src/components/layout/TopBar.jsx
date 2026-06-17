@@ -58,7 +58,7 @@ export default function TopBar({ title, onOpenMenu }) {
           width="min-w-56"
           trigger={
             <button
-              className="flex items-center rounded-full ring-offset-2 ring-offset-canvas transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+              className="relative z-[320] flex items-center rounded-full ring-offset-2 ring-offset-canvas transition hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
               aria-label="Account menu"
             >
               <Avatar user={user} size="sm" src={user?.avatarUrl} tooltipSide="bottom-end" />

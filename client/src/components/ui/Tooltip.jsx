@@ -26,7 +26,7 @@ export function TooltipBubble({ label, side = "top", className }) {
         // Show on hover, or on keyboard focus only (focus-visible). Using
         // focus-within here would keep the bubble stuck after a mouse click,
         // since the trigger retains DOM focus.
-        "pointer-events-none absolute z-[60] whitespace-nowrap rounded-md bg-ink px-2 py-1 text-xs font-medium text-ink-contrast opacity-0 shadow-pop transition-opacity duration-150 group-hover/tt:opacity-100 group-focus-visible/tt:opacity-100 group-has-[:focus-visible]/tt:opacity-100",
+        "pointer-events-none absolute z-[300] whitespace-nowrap rounded-md bg-ink px-2 py-1 text-xs font-medium text-ink-contrast opacity-0 shadow-pop transition-opacity duration-150 group-hover/tt:opacity-100 group-focus-visible/tt:opacity-100 group-has-[:focus-visible]/tt:opacity-100",
         POS[side],
         className
       )}
