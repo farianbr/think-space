@@ -14,7 +14,7 @@ import { Card, AvatarGroup, DropdownMenu, IconButton } from "../ui";
 import { timeAgo } from "../../lib/format";
 import { cn } from "../../lib/cn";
 
-/** Soft, calm preview band â€” abstract, no per-card network fetch. */
+/** Soft, calm preview band — abstract, no per-card network fetch. */
 function Preview({ board }) {
   const accent = board.color || "var(--color-line)";
   const count = board._count?.notes ?? 0;
@@ -169,7 +169,7 @@ export default function BoardCard({
             <span className="inline-flex items-center gap-1">
               <StickyNote className="size-3" /> {board._count?.notes ?? 0}
             </span>
-            <span>Â·</span>
+            <span>·</span>
             <span>{timeAgo(board.lastActivityAt || board.updatedAt)}</span>
           </p>
         </div>

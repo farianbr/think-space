@@ -84,3 +84,29 @@ export async function sendBoardInviteEmail({ to, inviterName, boardTitle, role, 
 
   return sendMail({ to, subject, html, text });
 }
+
+/**
+ * Email a password-reset link. `resetUrl` carries the single-use, time-limited
+ * token and opens the reset page. `expiresLabel` is human copy (e.g. "1 hour").
+ */
+export async function sendPasswordResetEmail({ to, name, resetUrl, expiresLabel = "1 hour" }) {
+  const who = name ? name.split(" ")[0] : "there";
+  const subject = `Reset your ${APP_NAME} password`;
+
+  const html = `
+  <div style="font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;max-width:480px;margin:0 auto;padding:8px">
+    <h1 style="font-size:20px;color:#0f172a;margin:0 0 8px">Reset your password</h1>
+    <p style="margin:0 0 16px;color:#475569;font-size:14px">
+      Hi ${who}, we received a request to reset the password for your ${APP_NAME} account.
+      Click the button below to choose a new one. This link expires in ${expiresLabel}.
+    </p>
+    <p style="margin:0 0 24px">
+      <a href="${resetUrl}" style="display:inline-block;background:#4f46e5;color:#fff;text-decoration:none;padding:10px 18px;border-radius:8px;font-size:14px;font-weight:600">Reset password</a>
+    </p>
+    <p style="margin:0;color:#94a3b8;font-size:12px">If you didn't request this, you can safely ignore this email — your password won't change.</p>
+  </div>`;
+
+  const text = `Hi ${who}, we received a request to reset your ${APP_NAME} password.\n\nUse this link to choose a new one (expires in ${expiresLabel}):\n${resetUrl}\n\nIf you didn't request this, ignore this email — your password won't change.`;
+
+  return sendMail({ to, subject, html, text });
+}

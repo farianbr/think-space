@@ -54,7 +54,7 @@ export default function RegisterForm({ onSuccess, initialEmail = "" }) {
         <Input
           icon={Lock}
           type="password"
-          placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+          placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="new-password"

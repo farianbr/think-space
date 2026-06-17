@@ -33,15 +33,15 @@ export default function TopBar({ title, onOpenMenu }) {
       <h1 className="truncate text-[15px] font-semibold tracking-tight text-ink">{title}</h1>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Search trigger â†’ command palette */}
+        {/* Search trigger → command palette */}
         <button
           onClick={() => openCommand()}
           className="hidden h-9 items-center gap-2 rounded-lg border border-hairline bg-surface px-3 text-sm text-faint transition-colors hover:border-line hover:text-muted sm:flex"
         >
           <Search className="size-4" strokeWidth={2} aria-hidden />
-          <span className="pr-6">Searchâ€¦</span>
+          <span className="pr-6">Search…</span>
           <kbd className="rounded border border-hairline bg-canvas px-1.5 py-0.5 text-[10px] font-medium text-faint">
-            {isMac ? "âŒ˜" : "Ctrl"} K
+            {isMac ? "⌘" : "Ctrl"} K
           </kbd>
         </button>
         <IconButton

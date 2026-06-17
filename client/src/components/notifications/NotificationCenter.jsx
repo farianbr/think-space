@@ -61,7 +61,7 @@ export default function NotificationCenter() {
       )}
 
       {open && (
-        <div className="absolute right-0 top-[calc(100%+8px)] z-50 w-[22rem] max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-pop animate-pop-in">
+        <div className="fixed left-2 right-2 top-[4.25rem] z-50 w-auto overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-pop animate-pop-in sm:absolute sm:left-auto sm:right-0 sm:top-[calc(100%+8px)] sm:w-[22rem] sm:max-w-[calc(100vw-2rem)]">
           <div className="flex items-center justify-between border-b border-hairline px-4 py-3">
             <h3 className="text-sm font-semibold text-ink">Notifications</h3>
             {unread > 0 && (

@@ -3,24 +3,29 @@ import { Link } from "react-router-dom";
 import { Mail, ArrowLeft, MailCheck } from "../lib/icons";
 import AuthShell from "../components/auth/AuthShell";
 import { Button, Input, Field } from "../components/ui";
+import { api } from "../lib/api";
 
 /**
- * Password reset request. Email delivery infra is deferred, so this presents the
- * standard non-revealing confirmation rather than claiming an email was sent.
+ * Password reset request. Posts to the backend which (when the account exists)
+ * emails a tokenized reset link. The response is intentionally non-revealing, so
+ * we always show the same confirmation regardless of whether the email matched.
  */
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
     setSubmitting(true);
-    // No email backend yet â€” acknowledge without leaking whether the account exists.
-    setTimeout(() => {
+    try {
+      await api.post("/auth/forgot-password", { email });
+    } catch {
+      // Swallow errors too — never reveal whether the account exists.
+    } finally {
       setSubmitting(false);
       setSent(true);
-    }, 500);
+    }
   };
 
   if (sent) {

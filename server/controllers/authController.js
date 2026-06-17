@@ -4,11 +4,29 @@ import jwt from "jsonwebtoken";
 import otplib from "otplib";
 
 const { authenticator } = otplib;
-import { registerSchema, loginSchema } from "../validation/schemas.js";
+import {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from "../validation/schemas.js";
 import { findRecoveryCodeMatch } from "../lib/recoveryCodes.js";
 import { applyPendingInvitesForUser } from "./invitesController.js";
+import { sendPasswordResetEmail } from "../lib/mailer.js";
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
+// How long a password-reset link stays valid.
+const RESET_TOKEN_TTL = "1h";
+const RESET_TOKEN_TTL_LABEL = "1 hour";
+
+// Per-user signing secret for reset tokens. Mixing in the current password hash
+// makes the token single-use: once the password changes, the hash changes and
+// any previously issued token (and any reused one) no longer verifies.
+function resetTokenSecret(user) {
+  return `${JWT_SECRET}:pwreset:${user.password}`;
+}
 
 /** shape helper to avoid leaking fields */
 function toPublicUser(u) {
@@ -89,6 +107,81 @@ export async function login(req, res) {
     const token = jwt.sign({ sub: user.id, name: user.name }, JWT_SECRET, { expiresIn: "7d" });
 
     return res.json({ user: toPublicUser(user), token });
+  } catch (err) {
+    if (err.name === "ZodError") {
+      return res.status(400).json({ error: "Invalid input", details: err.errors });
+    }
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
+  }
+}
+
+/**
+ * Start the password-reset flow. Always responds 200 with the same body so the
+ * endpoint can't be used to discover which emails have accounts. When the email
+ * does belong to a user we issue a short-lived signed token and email the link.
+ */
+export async function forgotPassword(req, res) {
+  try {
+    const { email } = forgotPasswordSchema.parse(req.body);
+
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (user) {
+      const token = jwt.sign(
+        { sub: user.id, purpose: "pwreset" },
+        resetTokenSecret(user),
+        { expiresIn: RESET_TOKEN_TTL }
+      );
+      const resetUrl = `${FRONTEND_URL}/reset-password?token=${encodeURIComponent(token)}`;
+      // Fire-and-forget delivery; never block or leak the result to the client.
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        resetUrl,
+        expiresLabel: RESET_TOKEN_TTL_LABEL,
+      });
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    if (err.name === "ZodError") {
+      return res.status(400).json({ error: "Invalid input", details: err.errors });
+    }
+    console.error(err);
+    return res.status(500).json({ error: "Server error" });
+  }
+}
+
+/**
+ * Complete the reset: verify the token against the user's current password hash
+ * and, if valid and unexpired, set the new password.
+ */
+export async function resetPassword(req, res) {
+  try {
+    const { token, password } = resetPasswordSchema.parse(req.body);
+
+    // Read the unverified payload only to locate the user; verification below
+    // is what actually authenticates the token.
+    const decoded = jwt.decode(token);
+    if (!decoded?.sub || decoded.purpose !== "pwreset") {
+      return res.status(400).json({ error: "This reset link is invalid or has expired." });
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: decoded.sub } });
+    if (!user) {
+      return res.status(400).json({ error: "This reset link is invalid or has expired." });
+    }
+
+    try {
+      jwt.verify(token, resetTokenSecret(user));
+    } catch {
+      return res.status(400).json({ error: "This reset link is invalid or has expired." });
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+    await prisma.user.update({ where: { id: user.id }, data: { password: hash } });
+
+    return res.json({ ok: true });
   } catch (err) {
     if (err.name === "ZodError") {
       return res.status(400).json({ error: "Invalid input", details: err.errors });

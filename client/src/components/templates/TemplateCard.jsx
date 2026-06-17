@@ -3,7 +3,7 @@ import { Card, Button, Badge } from "../ui";
 import { templateIcon } from "../../lib/templateIcon";
 
 /**
- * App Storeâ€“style editorial template card.
+ * App Store–style editorial template card.
  */
 export default function TemplateCard({ template, onUse, loading }) {
   const Icon = templateIcon(template.thumbnail);

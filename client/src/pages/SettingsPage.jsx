@@ -92,7 +92,7 @@ function ProfileSection() {
           <Input
             value={avatarUrl}
             onChange={(e) => setAvatarUrl(e.target.value)}
-            placeholder="https://â€¦"
+            placeholder="https://…"
           />
         </Field>
         <div>
@@ -297,7 +297,7 @@ function TeamSection() {
       </div>
 
       {isLoading ? (
-        <p className="mt-6 text-sm text-muted">Loadingâ€¦</p>
+        <p className="mt-6 text-sm text-muted">Loading…</p>
       ) : list.length === 0 ? (
         <div className="mt-8 flex flex-col items-center justify-center py-8 text-center">
           <span className="mb-3 flex size-12 items-center justify-center rounded-2xl border border-hairline bg-sunken text-faint">
@@ -340,7 +340,7 @@ function TeamSection() {
           </div>
           {list.length > 8 && (
             <p className="mt-3 text-center text-xs text-faint">
-              and {list.length - 8} more â€” see the full{" "}
+              and {list.length - 8} more — see the full{" "}
               <Link to="/team" className="font-medium text-muted hover:text-ink">
                 Team page
               </Link>
@@ -424,18 +424,18 @@ function BillingSection() {
             <h2 className="text-base font-semibold text-ink">Billing & plan</h2>
             <p className="mt-1 text-sm text-muted">
               {isLoading ? (
-                "Loadingâ€¦"
+                "Loading…"
               ) : (
                 <>
                   You're on the{" "}
                   <span className="font-medium capitalize text-ink">{currentPlan}</span> plan
                   {billing?.subscriptionStatus && billing.subscriptionStatus !== "active" && (
-                    <span className="text-danger"> Â· {billing.subscriptionStatus}</span>
+                    <span className="text-danger"> · {billing.subscriptionStatus}</span>
                   )}
                   {billing?.currentPeriodEnd && currentPlan !== "free" && (
                     <span className="text-faint">
                       {" "}
-                      Â· renews {new Date(billing.currentPeriodEnd).toLocaleDateString()}
+                      · renews {new Date(billing.currentPeriodEnd).toLocaleDateString()}
                     </span>
                   )}
                   .

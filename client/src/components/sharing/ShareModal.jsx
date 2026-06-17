@@ -61,7 +61,7 @@ export default function ShareModal({ open, onClose, boardId, board }) {
     ? "owner"
     : members.find((m) => m.userId === user?.id)?.role || null;
   const canManage = isOwner || canManageMembersRole(selfRole);
-  // Roles an admin (non-owner) is allowed to assign â€” no granting "admin".
+  // Roles an admin (non-owner) is allowed to assign — no granting "admin".
   const assignable = isOwner ? ASSIGNABLE_ROLES : ASSIGNABLE_ROLES.filter((r) => r.value !== "admin");
   const canManageRow = (m) =>
     canManage && m.userId !== ownerId && (isOwner || m.role !== "admin");
@@ -115,7 +115,7 @@ export default function ShareModal({ open, onClose, boardId, board }) {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Invite by emailâ€¦"
+                placeholder="Invite by email…"
               />
             </div>
             <div className="flex items-center gap-2">
@@ -147,7 +147,7 @@ export default function ShareModal({ open, onClose, boardId, board }) {
           </p>
           <div className="max-h-64 space-y-1 overflow-y-auto">
             {isLoading ? (
-              <p className="py-4 text-sm text-muted">Loading membersâ€¦</p>
+              <p className="py-4 text-sm text-muted">Loading members…</p>
             ) : (
               sortedMembers.map((m) => {
                 const isOwnerRow = m.userId === ownerId;

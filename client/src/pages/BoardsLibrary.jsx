@@ -90,7 +90,7 @@ export default function BoardsLibrary() {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-ink">Boards</h1>
           <p className="mt-1 text-sm text-muted">
-            {isLoading ? "Loadingâ€¦" : `${list.length} board${list.length === 1 ? "" : "s"}`}
+            {isLoading ? "Loading…" : `${list.length} board${list.length === 1 ? "" : "s"}`}
           </p>
         </div>
         <Button icon={Plus} onClick={openCreateBoard}>
@@ -127,7 +127,7 @@ export default function BoardsLibrary() {
             icon={Search}
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search boardsâ€¦"
+            placeholder="Search boards…"
             className="h-9"
           />
         </div>
@@ -178,7 +178,7 @@ export default function BoardsLibrary() {
           <EmptyState
             icon={Search}
             title="No matches"
-            description={`No boards match â€œ${q}â€.`}
+            description={`No boards match “${q}”.`}
           />
         ) : (
           <EmptyState

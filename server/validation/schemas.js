@@ -75,6 +75,16 @@ export const changePasswordSchema = z.object({
   newPassword: z.string().min(8).max(72),
 });
 
+// Password reset (forgot-password flow)
+export const forgotPasswordSchema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1),
+  password: z.string().min(8).max(72),
+});
+
 // two-factor (TOTP) — 6-digit code from an authenticator app
 export const enableTwoFactorSchema = z.object({
   code: z.string().trim().regex(/^\d{6}$/),

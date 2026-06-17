@@ -39,7 +39,7 @@ function PersonCard({ person }) {
       <div className="mt-4 flex items-center gap-1.5 text-xs text-muted">
         <Layers className="size-3.5" strokeWidth={2} aria-hidden />
         {person.sharedCount} shared board{person.sharedCount === 1 ? "" : "s"}
-        {person.lastActiveAt && <span className="text-faint">Â· active {timeAgo(person.lastActiveAt)}</span>}
+        {person.lastActiveAt && <span className="text-faint">· active {timeAgo(person.lastActiveAt)}</span>}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
@@ -87,7 +87,7 @@ export default function TeamPage() {
         <h1 className="text-2xl font-semibold tracking-tight text-ink">Team</h1>
         <p className="mt-1 text-sm text-muted">
           {isLoading
-            ? "Loadingâ€¦"
+            ? "Loading…"
             : `${(people || []).length} ${(people || []).length === 1 ? "person" : "people"} you collaborate with`}
         </p>
       </div>
@@ -97,7 +97,7 @@ export default function TeamPage() {
           icon={Search}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search peopleâ€¦"
+          placeholder="Search people…"
           className="h-9"
         />
       </div>
@@ -113,7 +113,7 @@ export default function TeamPage() {
           <EmptyState
             icon={Search}
             title="No matches"
-            description={`No teammates match â€œ${q}â€.`}
+            description={`No teammates match “${q}”.`}
           />
         ) : (
           <EmptyState

@@ -118,17 +118,21 @@ async function applySubscription(subscription) {
   if (!user) return;
 
   const active = ["active", "trialing", "past_due"].includes(subscription.status);
-  const priceId = subscription.items?.data?.[0]?.price?.id;
+  const item = subscription.items?.data?.[0];
+  const priceId = item?.price?.id;
   const plan = active ? planForPrice(priceId) : "free";
+
+  // As of Stripe API 2025-03-31, current_period_end moved off the subscription
+  // object onto each item; fall back to the legacy top-level field for older
+  // API versions.
+  const periodEnd = item?.current_period_end ?? subscription.current_period_end;
 
   await prisma.user.update({
     where: { id: user.id },
     data: {
       plan,
       subscriptionStatus: subscription.status,
-      currentPeriodEnd: subscription.current_period_end
-        ? new Date(subscription.current_period_end * 1000)
-        : null,
+      currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : null,
     },
   });
 }

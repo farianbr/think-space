@@ -85,7 +85,7 @@ export default function CommandPalette({ open, onClose, onCreateBoard }) {
       id: `tpl-${t.slug}`,
       group: "Templates",
       icon: Sparkles,
-      label: `Use â€œ${t.title}â€ template`,
+      label: `Use “${t.title}” template`,
       sublabel: t.category,
       keywords: `${t.title} ${t.category} template`,
       run: async () => {
@@ -148,15 +148,15 @@ export default function CommandPalette({ open, onClose, onCreateBoard }) {
 
   let flatIdx = -1;
   return createPortal(
-    <div className="fixed inset-0 z-[110] flex items-start justify-center p-4 pt-[12vh]">
+    <div className="fixed inset-0 z-[110] flex items-start justify-center p-4 pt-[10vh] sm:pt-[12vh]">
       <div className="absolute inset-0 bg-ink/35 backdrop-blur-[2px] animate-fade-in" onClick={onClose} aria-hidden />
       <div
         role="dialog"
         aria-modal="true"
         aria-label="Command menu"
-        className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-pop animate-pop-in"
+        className="relative flex max-h-[80dvh] w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-pop animate-pop-in"
       >
-        <div className="flex items-center gap-3 border-b border-hairline px-4">
+        <div className="flex shrink-0 items-center gap-3 border-b border-hairline px-4">
           <Search className="size-[18px] text-faint" strokeWidth={2} aria-hidden />
           <input
             ref={inputRef}
@@ -166,7 +166,7 @@ export default function CommandPalette({ open, onClose, onCreateBoard }) {
               setActive(0);
             }}
             onKeyDown={onKeyDown}
-            placeholder="Search boards, templates, or run a commandâ€¦"
+            placeholder="Search boards, templates, or run a command…"
             className="h-14 w-full bg-transparent text-[15px] text-ink placeholder:text-faint focus:outline-none"
             style={{ fontSize: "16px" }}
           />
@@ -175,10 +175,10 @@ export default function CommandPalette({ open, onClose, onCreateBoard }) {
           </kbd>
         </div>
 
-        <div ref={listRef} className="max-h-[52vh] overflow-y-auto p-2">
+        <div ref={listRef} className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
           {items.length === 0 ? (
             <div className="px-3 py-10 text-center text-sm text-muted">
-              No results for â€œ{query}â€
+              No results for “{query}”
             </div>
           ) : (
             groups.map((g) => (

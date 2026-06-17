@@ -18,7 +18,7 @@ export function describeActivity(activity) {
     case "board.created":
       return { icon: Plus, text: `${actor} created ${m.template ? "a board from a template" : "this board"}` };
     case "board.renamed":
-      return { icon: Pencil, text: `${actor} renamed the board to â€œ${m.to}â€` };
+      return { icon: Pencil, text: `${actor} renamed the board to “${m.to}”` };
     case "board.archived":
       return { icon: Archive, text: `${actor} archived the board` };
     case "board.restored":
@@ -30,7 +30,7 @@ export function describeActivity(activity) {
     case "member.added":
       return { icon: UserPlus, text: `${actor} added a collaborator` };
     case "member.role_changed":
-      return { icon: UserCog, text: `${actor} changed a collaboratorâ€™s role` };
+      return { icon: UserCog, text: `${actor} changed a collaborator’s role` };
     default:
       return { icon: Bell, text: `${actor} updated the board` };
   }
@@ -44,21 +44,21 @@ export function describeNotification(n) {
       return {
         icon: UserPlus,
         title: "Board invitation",
-        body: `You were added to â€œ${data.boardTitle || "a board"}â€${data.role ? ` as ${data.role}` : ""}.`,
+        body: `You were added to “${data.boardTitle || "a board"}”${data.role ? ` as ${data.role}` : ""}.`,
       };
     case "member_added":
       return {
         icon: UserPlus,
         title: "New collaborator",
-        body: `${data.memberName || "Someone"} joined â€œ${data.boardTitle || "a board"}â€.`,
+        body: `${data.memberName || "Someone"} joined “${data.boardTitle || "a board"}”.`,
       };
     case "mention":
       return {
         icon: Bell,
         title: "You were mentioned",
         body: data.preview
-          ? `â€œ${data.preview}â€`
-          : `You were mentioned in â€œ${data.boardTitle || "a board"}â€.`,
+          ? `“${data.preview}”`
+          : `You were mentioned in “${data.boardTitle || "a board"}”.`,
       };
     default:
       return { icon: Bell, title: "Update", body: data.message || "You have a new update." };

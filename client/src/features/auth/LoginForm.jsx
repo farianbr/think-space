@@ -152,7 +152,7 @@ export default function LoginForm({ onSuccess, isDemo }) {
         <Input
           icon={Lock}
           type="password"
-          placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+          placeholder="••••••••"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           autoComplete="current-password"
