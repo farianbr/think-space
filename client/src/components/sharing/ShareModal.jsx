@@ -183,6 +183,7 @@ export default function ShareModal({ open, onClose, boardId, board }) {
                         icon={UserMinus}
                         label="Remove member"
                         size="sm"
+                        tooltipSide="bottom-end"
                         onClick={() =>
                           removeMember.mutate(m.userId, {
                             onSuccess: () => toast.success("Member removed"),

@@ -44,6 +44,7 @@ export default function Avatar({
   ring = false,
   className,
   title,
+  tooltipSide = "bottom",
 }) {
   const u = user || { name, email };
   const color = PALETTE[hashString(u.email || u.name || "") % PALETTE.length];
@@ -68,7 +69,7 @@ export default function Avatar({
   );
 
   return label ? (
-    <Tooltip label={label} side="bottom" className="normal-case">
+    <Tooltip label={label} side={tooltipSide} className="normal-case">
       {avatar}
     </Tooltip>
   ) : (
