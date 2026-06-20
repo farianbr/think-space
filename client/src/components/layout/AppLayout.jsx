@@ -25,6 +25,10 @@ function titleFor(loc) {
 export default function AppLayout() {
   const loc = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // `drawerMounted` keeps the drawer in the DOM through its exit animation;
+  // `drawerShown` is the visual target that drives the slide/fade transition.
+  const [drawerMounted, setDrawerMounted] = useState(false);
+  const [drawerShown, setDrawerShown] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -33,6 +37,23 @@ export default function AppLayout() {
 
   // Close the mobile drawer on navigation.
   useEffect(() => setDrawerOpen(false), [loc.pathname, loc.search]);
+
+  // Mount on open; start the exit transition on close (unmount happens on
+  // transition end). Once mounted, flip to the shown state on the next frame so
+  // the browser paints the closed state first and the enter transition runs.
+  useEffect(() => {
+    if (drawerOpen) {
+      setDrawerMounted(true);
+    } else {
+      setDrawerShown(false);
+    }
+  }, [drawerOpen]);
+
+  useEffect(() => {
+    if (!drawerMounted) return;
+    const id = requestAnimationFrame(() => setDrawerShown(true));
+    return () => cancelAnimationFrame(id);
+  }, [drawerMounted]);
 
   // Global Cmd/Ctrl+K toggles the palette.
   useEffect(() => {
@@ -60,13 +81,25 @@ export default function AppLayout() {
         </aside>
 
         {/* Mobile drawer */}
-        {drawerOpen && (
+        {drawerMounted && (
           <div className="fixed inset-0 z-40 lg:hidden">
             <div
-              className="absolute inset-0 bg-ink/35 backdrop-blur-[2px] animate-fade-in"
+              className={cn(
+                "absolute inset-0 bg-ink/35 backdrop-blur-[2px] transition-opacity duration-300",
+                drawerShown ? "opacity-100" : "opacity-0"
+              )}
               onClick={() => setDrawerOpen(false)}
             />
-            <aside className="absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-hairline bg-surface shadow-pop animate-slide-in-right">
+            <aside
+              className={cn(
+                "absolute inset-y-0 left-0 w-72 max-w-[85vw] border-r border-hairline bg-surface shadow-pop transition-transform duration-300 ease-out",
+                drawerShown ? "translate-x-0" : "-translate-x-full"
+              )}
+              onTransitionEnd={() => {
+                // Unmount only after the closing slide finishes.
+                if (!drawerShown) setDrawerMounted(false);
+              }}
+            >
               <Sidebar
                 onNavigate={() => setDrawerOpen(false)}
                 onNewBoard={() => {

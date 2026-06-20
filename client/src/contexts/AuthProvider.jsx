@@ -59,14 +59,18 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    // Clear local auth first so we're signed out even if the network call fails.
     clearAuth();
     setToken(null);
     setUser(null);
-    // Optional: hit server logout endpoint
-    api
-      .post("/auth/logout")
-      .catch((err) => console.debug("logout request failed", err));
+    // Hit the server logout endpoint; await it so callers can show a loading
+    // state while the request is in flight.
+    try {
+      await api.post("/auth/logout");
+    } catch (err) {
+      console.debug("logout request failed", err);
+    }
     // Also disconnect sockets if you use them
     import("../lib/socket")
       .then((m) => m.disconnectSocket && m.disconnectSocket())

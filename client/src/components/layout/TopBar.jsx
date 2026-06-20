@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Menu, Search, Settings, User, LogOut } from "../../lib/icons";
 import { useAuth } from "../../contexts/authContext";
@@ -11,9 +12,12 @@ export default function TopBar({ title, onOpenMenu }) {
   const { user, logout } = useAuth();
   const { openCommand } = useCommand();
   const navigate = useNavigate();
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    await logout();
     setSocketAuthFromStorage();
     navigate("/login");
   };
@@ -80,8 +84,14 @@ export default function TopBar({ title, onOpenMenu }) {
             Settings
           </DropdownMenu.Item>
           <DropdownMenu.Separator />
-          <DropdownMenu.Item icon={LogOut} danger onSelect={handleLogout}>
-            Sign out
+          <DropdownMenu.Item
+            icon={LogOut}
+            danger
+            loading={loggingOut}
+            closeOnSelect={false}
+            onSelect={handleLogout}
+          >
+            {loggingOut ? "Signing out…" : "Sign out"}
           </DropdownMenu.Item>
         </DropdownMenu>
       </div>

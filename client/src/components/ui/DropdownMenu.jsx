@@ -9,6 +9,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "../../lib/cn";
+import Spinner from "./Spinner";
 
 // Lets items close the menu on select without relying on event bubbling
 // (items call stopPropagation, so the menu's own onClick can't see the click).
@@ -133,17 +134,28 @@ export default function DropdownMenu({
   );
 }
 
-function Item({ icon: Icon, danger, disabled, onSelect, children, className }) {
+function Item({
+  icon: Icon,
+  danger,
+  disabled,
+  loading,
+  closeOnSelect = true,
+  onSelect,
+  children,
+  className,
+}) {
   const menu = useContext(MenuContext);
   return (
     <button
       type="button"
       role="menuitem"
-      disabled={disabled}
+      disabled={disabled || loading}
       onClick={(e) => {
         e.stopPropagation();
         onSelect?.(e);
-        menu?.close?.();
+        // Keep the menu open when the caller drives an async action so a
+        // loading state stays visible (e.g. signing out).
+        if (closeOnSelect) menu?.close?.();
       }}
       className={cn(
         "flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-sm font-medium transition-colors disabled:pointer-events-none disabled:opacity-40",
@@ -153,7 +165,11 @@ function Item({ icon: Icon, danger, disabled, onSelect, children, className }) {
         className
       )}
     >
-      {Icon && <Icon className="size-4 shrink-0" strokeWidth={2} aria-hidden />}
+      {loading ? (
+        <Spinner size="sm" className="shrink-0 border-current text-current" />
+      ) : (
+        Icon && <Icon className="size-4 shrink-0" strokeWidth={2} aria-hidden />
+      )}
       <span className="truncate">{children}</span>
     </button>
   );

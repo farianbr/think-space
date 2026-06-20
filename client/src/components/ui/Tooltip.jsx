@@ -26,7 +26,10 @@ export function TooltipBubble({ label, side = "top", className }) {
         // Show on hover, or on keyboard focus only (focus-visible). Using
         // focus-within here would keep the bubble stuck after a mouse click,
         // since the trigger retains DOM focus.
-        "pointer-events-none absolute z-[300] whitespace-nowrap rounded-md bg-ink px-2 py-1 text-xs font-medium text-ink-contrast opacity-0 shadow-pop transition-opacity duration-150 group-hover/tt:opacity-100 group-focus-visible/tt:opacity-100 group-has-[:focus-visible]/tt:opacity-100",
+        // The delay is read from the transition's *target* state: hovering/
+        // focusing applies delay-500 (waits before showing), while the resting
+        // state keeps delay-0 so the bubble hides instantly on leave.
+        "pointer-events-none absolute z-[300] whitespace-nowrap rounded-md bg-ink px-2 py-1 text-xs font-medium text-ink-contrast opacity-0 shadow-pop transition-opacity delay-0 duration-150 group-hover/tt:opacity-100 group-hover/tt:delay-500 group-focus-visible/tt:opacity-100 group-focus-visible/tt:delay-500 group-has-[:focus-visible]/tt:opacity-100 group-has-[:focus-visible]/tt:delay-500",
         POS[side],
         className
       )}
